@@ -1,59 +1,94 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const AdminPrograms = () => {
+    const navigate = useNavigate();
+    
+    // Auth & User State
+    const [adminUser, setAdminUser] = useState({ name: '', role: '' });
+    
     const [programs, setPrograms] = useState([]);
     const [selectedProgram, setSelectedProgram] = useState(null);
     const [budgetReport, setBudgetReport] = useState(null);
+    const [resources, setResources] = useState([]); // For ProgramResourceController
     
     // UI States
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [showResourceForm, setShowResourceForm] = useState(false);
 
-    // Form State matching ProgramRequest.java
+    // Forms
     const initialFormState = { title: '', description: '', startDate: '', endDate: '', budget: '' };
     const [formData, setFormData] = useState(initialFormState);
+    const [resourceForm, setResourceForm] = useState({ type: 'FUNDS', quantity: '' });
 
-    // Assuming you saved the token during login
-    const user = JSON.parse(localStorage.getItem('user'));
-    const axiosConfig = {
-        headers: { Authorization: `Bearer ${user?.token}` } // Attach token if your backend requires it
-    };
+    const BASE_URL = 'http://localhost:8383/tourismgov/v1';
 
-    const BASE_URL = 'http://localhost:8383/tourismgov/v1'; // Using port 8383 from your Postman setup
+    // 1. BULLETPROOF TOKEN CONFIGURATION
+    // This automatically grabs the token you saved during Login and formats it for Spring Boot
+    const getAxiosConfig = useCallback(() => {
+        const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('user'))?.token;
+        return { 
+            headers: { 
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            } 
+        };
+    }, []);
+
+    // --- SECURITY CHECK & DATA FETCHING ---
+    useEffect(() => {
+        const storedUser = JSON.parse(localStorage.getItem('user'));
+        const token = localStorage.getItem('token');
+        
+        // Route Protection
+        if (!token || !storedUser || (storedUser.role !== 'ADMIN' && storedUser.role !== 'OFFICER')) {
+            navigate('/login');
+            return;
+        }
+        
+        setAdminUser({ name: storedUser.name, role: storedUser.role });
+        fetchPrograms();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [navigate]);
 
     // --- API: Fetch All Programs ---
     const fetchPrograms = async () => {
         setLoading(true);
         try {
-            const res = await axios.get(`${BASE_URL}/programs`, axiosConfig);
+            const res = await axios.get(`${BASE_URL}/programs`, getAxiosConfig());
             setPrograms(res.data);
             setError(null);
+            
+            // Auto-load the first program if data exists to make the dashboard dynamic
+            if (res.data.length > 0 && !selectedProgram) {
+                handleSelectProgram(res.data[0].programId);
+            }
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to fetch programs.');
+            setError(err.response?.data?.message || 'Failed to fetch programs. Please check your token or server.');
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        fetchPrograms();
-    }, []);
-
-    // --- API: Fetch Single Program & Budget Report ---
+    // --- API: Fetch Single Program, Budget, AND Resources ---
     const handleSelectProgram = async (programId) => {
         try {
-            const [progRes, budgetRes] = await Promise.all([
-                axios.get(`${BASE_URL}/programs/${programId}`, axiosConfig),
-                axios.get(`${BASE_URL}/programs/${programId}/budget-report`, axiosConfig)
+            const [progRes, budgetRes, resourceRes] = await Promise.all([
+                axios.get(`${BASE_URL}/programs/${programId}`, getAxiosConfig()),
+                axios.get(`${BASE_URL}/programs/${programId}/budget-report`, getAxiosConfig()),
+                axios.get(`${BASE_URL}/programs/${programId}/resources`, getAxiosConfig())
             ]);
             setSelectedProgram(progRes.data);
             setBudgetReport(budgetRes.data);
+            setResources(resourceRes.data);
             setIsFormOpen(false);
+            setShowResourceForm(false);
         } catch (err) {
-            setError('Failed to load program details.');
+            setError('Failed to load comprehensive program details.');
         }
     };
 
@@ -63,35 +98,28 @@ const AdminPrograms = () => {
         setError(null);
         try {
             if (isEditing) {
-                // PUT Request
-                await axios.put(`${BASE_URL}/programs/${selectedProgram.programId}`, formData, axiosConfig);
+                await axios.put(`${BASE_URL}/programs/${selectedProgram.programId}`, formData, getAxiosConfig());
             } else {
-                // POST Request
-                await axios.post(`${BASE_URL}/programs`, formData, axiosConfig);
+                await axios.post(`${BASE_URL}/programs`, formData, getAxiosConfig());
             }
             
             setFormData(initialFormState);
             setIsFormOpen(false);
             setIsEditing(false);
-            fetchPrograms(); // Refresh list
-            
-            if (isEditing) handleSelectProgram(selectedProgram.programId); // Refresh details if editing
-            
+            fetchPrograms(); 
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to save program. Check dates and duplicates.');
         }
     };
 
-    // --- API: Update Status ---
+    // --- API: Update Program Status ---
     const handleStatusChange = async (programId, newStatus) => {
         try {
-            await axios.patch(`${BASE_URL}/programs/${programId}/status?status=${newStatus}`, null, axiosConfig);
+            await axios.patch(`${BASE_URL}/programs/${programId}/status?status=${newStatus}`, null, getAxiosConfig());
             fetchPrograms();
-            if (selectedProgram?.programId === programId) {
-                handleSelectProgram(programId);
-            }
+            if (selectedProgram?.programId === programId) handleSelectProgram(programId);
         } catch (err) {
-            alert(err.response?.data?.message || "Cannot change status. Ensure program is not cancelled.");
+            alert(err.response?.data?.message || "Cannot change status.");
         }
     };
 
@@ -99,11 +127,42 @@ const AdminPrograms = () => {
     const handleDelete = async (programId) => {
         if (!window.confirm('Are you sure you want to cancel and delete this program?')) return;
         try {
-            await axios.delete(`${BASE_URL}/programs/${programId}`, axiosConfig);
+            await axios.delete(`${BASE_URL}/programs/${programId}`, getAxiosConfig());
             setSelectedProgram(null);
             fetchPrograms();
         } catch (err) {
             alert('Failed to delete program.');
+        }
+    };
+
+    // --- API: Resource Management ---
+    const handleAllocateResource = async (e) => {
+        e.preventDefault();
+        try {
+            await axios.post(`${BASE_URL}/programs/${selectedProgram.programId}/resources`, resourceForm, getAxiosConfig());
+            setResourceForm({ type: 'FUNDS', quantity: '' });
+            setShowResourceForm(false);
+            handleSelectProgram(selectedProgram.programId); // Refresh details
+        } catch (err) {
+            alert(err.response?.data?.message || 'Failed to allocate resource.');
+        }
+    };
+
+    const handleUpdateResourceStatus = async (resourceId, newStatus) => {
+        try {
+            await axios.patch(`${BASE_URL}/resources/${resourceId}/status?status=${newStatus}`, null, getAxiosConfig());
+            handleSelectProgram(selectedProgram.programId);
+        } catch (err) {
+            alert('Failed to update resource status.');
+        }
+    };
+
+    const handleDeleteResource = async (resourceId) => {
+        try {
+            await axios.delete(`${BASE_URL}/resources/${resourceId}`, getAxiosConfig());
+            handleSelectProgram(selectedProgram.programId);
+        } catch (err) {
+            alert('Failed to delete resource.');
         }
     };
 
@@ -117,27 +176,45 @@ const AdminPrograms = () => {
 
     const openEditForm = (program) => {
         setFormData({
-            title: program.title,
-            description: program.description,
-            startDate: program.startDate,
-            endDate: program.endDate,
-            budget: program.budget
+            title: program.title, description: program.description,
+            startDate: program.startDate, endDate: program.endDate, budget: program.budget
         });
         setIsEditing(true);
         setIsFormOpen(true);
     };
 
+    const handleLogout = () => {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        navigate('/login');
+    };
+
     return (
         <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] font-sans selection:bg-[#FF6D00] selection:text-white flex flex-col">
             
-            {/* TOP NAVIGATION */}
-            <div className="bg-[#1A237E] p-4 px-8 flex justify-between items-center text-white shadow-lg sticky top-0 z-50">
-                <div className="text-xl font-black tracking-tighter flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-[#FF6D00]"></span>
-                    TourismGov | Admin Dashboard
+            {/* MATCHING ADMIN TOP NAVIGATION */}
+            <div className="bg-[#1A237E] p-4 px-6 md:px-10 flex justify-between items-center text-white shadow-lg sticky top-0 z-50">
+                <div className="flex items-center gap-4">
+                    <Link to="/admin" className="hover:text-[#FF6D00] transition-colors text-2xl font-bold" title="Back to Dashboard">
+                        &larr;
+                    </Link>
+                    <div className="text-lg md:text-2xl font-black tracking-tighter flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-[#FF6D00]"></span>
+                        TourismGov | Program Management
+                    </div>
                 </div>
-                <div className="flex gap-4 items-center">
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-70">Logged in as Admin</span>
+                
+                <div className="flex items-center gap-6">
+                    <div className="hidden md:flex flex-col items-end">
+                        <span className="text-xs font-bold uppercase tracking-widest text-[#FF6D00]">{adminUser.role}</span>
+                        <span className="text-sm font-black uppercase">{adminUser.name}</span>
+                    </div>
+                    <button 
+                        onClick={handleLogout}
+                        className="bg-white/10 hover:bg-[#FF6D00] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors"
+                    >
+                        Log Out
+                    </button>
                 </div>
             </div>
 
@@ -158,11 +235,9 @@ const AdminPrograms = () => {
                     {/* EMPTY STATE */}
                     {!loading && programs.length === 0 && (
                         <div className="bg-white p-8 rounded-[2rem] border-2 border-dashed border-[#1A237E]/20 text-center flex flex-col items-center justify-center py-16 shadow-sm">
-                            <div className="w-16 h-16 bg-[#1A237E]/5 rounded-full flex items-center justify-center mb-4">
-                                <span className="text-2xl">📋</span>
-                            </div>
+                            <span className="text-2xl mb-4">📋</span>
                             <h3 className="font-black text-xl uppercase text-[#1A237E] mb-2">No Programs Found</h3>
-                            <p className="font-medium text-sm opacity-60 mb-6">The database is currently empty. Click below to initialize your first tourism program.</p>
+                            <p className="font-medium text-sm opacity-60 mb-6">Initialize your first tourism program.</p>
                             <button onClick={openCreateForm} className="bg-[#1A237E] text-white px-6 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-[#FF6D00] transition-colors">
                                 Initialize First Program
                             </button>
@@ -277,46 +352,87 @@ const AdminPrograms = () => {
                                 </div>
                             </div>
 
-                            {/* Description */}
-                            <div className="mb-8 bg-[#F8F9FF] p-6 rounded-[1.5rem]">
-                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-[#1A237E]">Program Abstract</h4>
-                                <p className="font-medium opacity-80 leading-relaxed">{selectedProgram.description}</p>
-                            </div>
-
                             {/* Budget Report Analysis */}
                             {budgetReport && (
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 text-[#1A237E]">Financial Analytics</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                        <div className="bg-[#1A237E] text-white p-6 rounded-[1.5rem] shadow-lg">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Total Budget</p>
-                                            <p className="text-3xl font-black">${budgetReport.totalBudget?.toLocaleString()}</p>
-                                        </div>
-                                        <div className="bg-[#FFFDF7] border-2 border-[#1A237E]/10 p-6 rounded-[1.5rem]">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#1A237E] mb-1">Funds Expended</p>
-                                            <p className="text-3xl font-black text-[#D81B60]">${budgetReport.amountSpent?.toLocaleString()}</p>
-                                        </div>
-                                        <div className="bg-[#FFFDF7] border-2 border-[#FF6D00]/20 p-6 rounded-[1.5rem]">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-[#FF6D00] mb-1">Remaining</p>
-                                            <p className="text-3xl font-black text-[#004D40]">${budgetReport.remainingBudget?.toLocaleString()}</p>
-                                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                                    <div className="bg-[#1A237E] text-white p-6 rounded-[1.5rem] shadow-lg">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Total Budget</p>
+                                        <p className="text-3xl font-black">${budgetReport.totalBudget?.toLocaleString()}</p>
+                                    </div>
+                                    <div className="bg-[#FFFDF7] border-2 border-[#1A237E]/10 p-6 rounded-[1.5rem]">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#1A237E] mb-1">Funds Expended</p>
+                                        <p className="text-3xl font-black text-[#D81B60]">${budgetReport.amountSpent?.toLocaleString()}</p>
+                                    </div>
+                                    <div className="bg-[#FFFDF7] border-2 border-[#FF6D00]/20 p-6 rounded-[1.5rem]">
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#FF6D00] mb-1">Remaining</p>
+                                        <p className="text-3xl font-black text-[#004D40]">${budgetReport.remainingBudget?.toLocaleString()}</p>
                                     </div>
                                 </div>
                             )}
 
+                            {/* RESOURCES SECTION */}
+                            <div className="mt-8 border-t border-[#1A237E]/10 pt-8">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-2xl font-black uppercase text-[#1A237E]">Resources</h3>
+                                    <button onClick={() => setShowResourceForm(!showResourceForm)} className="text-[#FF6D00] font-bold uppercase text-[10px] tracking-widest hover:text-[#1A237E]">
+                                        {showResourceForm ? 'Cancel' : '+ Allocate Resource'}
+                                    </button>
+                                </div>
+
+                                {showResourceForm && (
+                                    <form onSubmit={handleAllocateResource} className="bg-[#F8F9FF] p-5 rounded-[1.5rem] border border-[#1A237E]/10 mb-6 flex gap-4 items-center">
+                                        <select required className="flex-1 px-4 py-3 bg-white rounded-full border-none focus:ring-2 focus:ring-[#FF6D00] text-xs font-bold uppercase outline-none"
+                                            value={resourceForm.type} onChange={e => setResourceForm({...resourceForm, type: e.target.value})}>
+                                            <option value="FUNDS">Funds</option>
+                                            <option value="STAFF">Staff</option>
+                                            <option value="EQUIPMENT">Equipment</option>
+                                            <option value="TRANSPORT">Transport</option>
+                                        </select>
+                                        <input type="number" placeholder="Quantity/Amount" required className="flex-1 px-4 py-3 bg-white rounded-full border-none focus:ring-2 focus:ring-[#FF6D00] text-sm outline-none"
+                                            value={resourceForm.quantity} onChange={e => setResourceForm({...resourceForm, quantity: e.target.value})} />
+                                        <button type="submit" className="bg-[#1A237E] text-white font-black uppercase text-[10px] px-6 py-3 rounded-full hover:bg-[#FF6D00]">Add</button>
+                                    </form>
+                                )}
+
+                                <div className="space-y-3">
+                                    {resources.length === 0 ? <p className="text-sm opacity-50 italic">No resources allocated yet.</p> : null}
+                                    {resources.map(res => (
+                                        <div key={res.resourceId} className="flex items-center justify-between p-4 bg-white border border-[#1A237E]/10 rounded-full shadow-sm hover:border-[#FF6D00]/30 transition-colors">
+                                            <div className="flex items-center gap-4">
+                                                <span className="bg-[#1A237E] text-white w-10 h-10 flex items-center justify-center rounded-full text-[10px] font-black uppercase">{res.type.substring(0,3)}</span>
+                                                <div>
+                                                    <p className="font-black text-sm uppercase text-[#1A237E]">{res.type}</p>
+                                                    <p className="font-bold text-[10px] uppercase opacity-50">Qty: {res.quantity}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-4 items-center">
+                                                <select 
+                                                    className="bg-transparent text-[9px] font-bold uppercase outline-none text-[#FF6D00] cursor-pointer"
+                                                    value={res.status} onChange={(e) => handleUpdateResourceStatus(res.resourceId, e.target.value)}
+                                                >
+                                                    <option value="ALLOCATED">Allocated</option>
+                                                    <option value="RELEASED">Released</option>
+                                                    <option value="EXPENDED">Expended</option>
+                                                    <option value="CANCELLED">Cancelled</option>
+                                                </select>
+                                                <button onClick={() => handleDeleteResource(res.resourceId)} className="text-[#D81B60] hover:text-red-800 text-lg leading-none font-bold" title="Delete Resource">&times;</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
                             {/* Action Buttons */}
-                            <div className="flex gap-4 pt-4 border-t border-[#1A237E]/10">
+                            <div className="flex gap-4 pt-8 mt-8 border-t border-[#1A237E]/10">
                                 <button onClick={() => openEditForm(selectedProgram)} className="flex-1 bg-[#1A237E]/5 text-[#1A237E] py-4 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-[#1A237E] hover:text-white transition-colors">
                                     Edit Details
                                 </button>
                                 <button onClick={() => handleDelete(selectedProgram.programId)} className="flex-1 bg-red-50 text-red-600 py-4 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition-colors">
-                                    Cancel & Delete Program
+                                    Delete Program
                                 </button>
                             </div>
                         </div>
                     ) : (
-                        
-                        /* INITIAL RIGHT PANEL STATE */
                         <div className="h-full min-h-[500px] flex flex-col items-center justify-center border-2 border-dashed border-[#1A237E]/20 rounded-[2rem] bg-white/50">
                             <span className="text-4xl mb-4 opacity-50">👆</span>
                             <p className="font-bold text-sm uppercase tracking-widest opacity-40">Select a program to view details</p>
