@@ -5,6 +5,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminEvents from './pages/AdminEvents';
 import TouristEvents from './pages/TouristEvents';
+import AdminPrograms from './pages/AdminPrograms';
+import TouristPrograms from './pages/TouristPrograms';
 function App() {
   return (
     <Router>
@@ -12,8 +14,10 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/admin" element={<AdminEvents />} />
-        <Route path="/tourist" element={<TouristEvents />} />
+        <Route path="/admin-events" element={<AdminEvents />} />
+        <Route path="/events" element={<TouristEvents />} />
+        <Route path="/programs" element={<TouristPrograms />} />
+        <Route path="/admin-programs" element={<AdminPrograms />} />
       </Routes>
     </Router>
   );
