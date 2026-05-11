@@ -128,7 +128,7 @@ const Login = () => {
                 disabled={loading}
                 className="w-full bg-[#1A237E] text-white font-black uppercase tracking-[0.2em] py-4 text-sm rounded-full hover:bg-[#FF6D00] shadow-xl transition-all duration-300 hover:-translate-y-1 mt-4 disabled:opacity-50 disabled:hover:translate-y-0"
               >
-                {loading ? "Authenticating..." : "Secure Login"}
+                {loading ? "Authenticating..." : "Login"}
               </button>
             </form>
 
