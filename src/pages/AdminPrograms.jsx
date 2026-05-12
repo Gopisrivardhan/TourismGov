@@ -11,14 +11,16 @@ const AdminPrograms = () => {
     const [programs, setPrograms] = useState([]);
     const [selectedProgram, setSelectedProgram] = useState(null);
     const [budgetReport, setBudgetReport] = useState(null);
-    const [resources, setResources] = useState([]); // For ProgramResourceController
+    const [resources, setResources] = useState([]); 
     
     // UI States
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [successMsg, setSuccessMsg] = useState(''); 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [showResourceForm, setShowResourceForm] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false); 
 
     // Forms
     const initialFormState = { title: '', description: '', startDate: '', endDate: '', budget: '' };
@@ -28,7 +30,6 @@ const AdminPrograms = () => {
     const BASE_URL = 'http://localhost:8383/tourismgov/v1';
 
     // 1. BULLETPROOF TOKEN CONFIGURATION
-    // This automatically grabs the token you saved during Login and formats it for Spring Boot
     const getAxiosConfig = useCallback(() => {
         const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('user'))?.token;
         return { 
@@ -44,7 +45,6 @@ const AdminPrograms = () => {
         const storedUser = JSON.parse(localStorage.getItem('user'));
         const token = localStorage.getItem('token');
         
-        // Route Protection
         if (!token || !storedUser || (storedUser.role !== 'ADMIN' && storedUser.role !== 'OFFICER')) {
             navigate('/login');
             return;
@@ -62,13 +62,8 @@ const AdminPrograms = () => {
             const res = await axios.get(`${BASE_URL}/programs`, getAxiosConfig());
             setPrograms(res.data);
             setError(null);
-            
-            // Auto-load the first program if data exists to make the dashboard dynamic
-            if (res.data.length > 0 && !selectedProgram) {
-                handleSelectProgram(res.data[0].programId);
-            }
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to fetch programs. Please check your token or server.');
+            setError(err.response?.data?.message || 'Failed to fetch programs.');
         } finally {
             setLoading(false);
         }
@@ -87,32 +82,55 @@ const AdminPrograms = () => {
             setResources(resourceRes.data);
             setIsFormOpen(false);
             setShowResourceForm(false);
+            setError(null);
+            setSuccessMsg('');
+            
+            // On mobile, scroll down to the details view when a program is selected
+            if (window.innerWidth < 1024) {
+                setTimeout(() => {
+                    document.getElementById('details-panel')?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
         } catch (err) {
-            setError('Failed to load comprehensive program details.');
+            setIsFormOpen(false); 
+            setSelectedProgram(null);
+            setError(`Data Fetch Error: ${err.response?.data?.message || err.message}`);
         }
     };
 
     // --- API: Create or Update Program ---
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (isSubmitting) return; 
+
         setError(null);
+        setSuccessMsg('');
+        setIsSubmitting(true); 
+
         try {
             if (isEditing) {
                 await axios.put(`${BASE_URL}/programs/${selectedProgram.programId}`, formData, getAxiosConfig());
+                setSuccessMsg('Program updated successfully!');
             } else {
                 await axios.post(`${BASE_URL}/programs`, formData, getAxiosConfig());
+                setSuccessMsg('Tourism program created successfully!'); 
             }
             
             setFormData(initialFormState);
             setIsFormOpen(false);
             setIsEditing(false);
-            fetchPrograms(); 
+            await fetchPrograms(); 
+            
+            setTimeout(() => setSuccessMsg(''), 4000);
+            
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to save program. Check dates and duplicates.');
+        } finally {
+            setIsSubmitting(false); 
         }
     };
 
-    // --- API: Update Program Status ---
     const handleStatusChange = async (programId, newStatus) => {
         try {
             await axios.patch(`${BASE_URL}/programs/${programId}/status?status=${newStatus}`, null, getAxiosConfig());
@@ -123,13 +141,14 @@ const AdminPrograms = () => {
         }
     };
 
-    // --- API: Delete Program ---
     const handleDelete = async (programId) => {
         if (!window.confirm('Are you sure you want to cancel and delete this program?')) return;
         try {
             await axios.delete(`${BASE_URL}/programs/${programId}`, getAxiosConfig());
             setSelectedProgram(null);
             fetchPrograms();
+            setSuccessMsg('Program deleted successfully.');
+            setTimeout(() => setSuccessMsg(''), 4000);
         } catch (err) {
             alert('Failed to delete program.');
         }
@@ -142,7 +161,9 @@ const AdminPrograms = () => {
             await axios.post(`${BASE_URL}/programs/${selectedProgram.programId}/resources`, resourceForm, getAxiosConfig());
             setResourceForm({ type: 'FUNDS', quantity: '' });
             setShowResourceForm(false);
-            handleSelectProgram(selectedProgram.programId); // Refresh details
+            handleSelectProgram(selectedProgram.programId); 
+            setSuccessMsg('Resource allocated successfully.');
+            setTimeout(() => setSuccessMsg(''), 3000);
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to allocate resource.');
         }
@@ -165,13 +186,24 @@ const AdminPrograms = () => {
             alert('Failed to delete resource.');
         }
     };
-
-    // --- Handlers for UI ---
-    const openCreateForm = () => {
-        setFormData(initialFormState);
-        setIsEditing(false);
-        setIsFormOpen(true);
-        setSelectedProgram(null);
+    
+    const handleToggleForm = () => {
+        if (isFormOpen && !isEditing) {
+            setIsFormOpen(false);
+            setError(null);
+        } else {
+            setFormData(initialFormState);
+            setIsEditing(false);
+            setIsFormOpen(true);
+            setSelectedProgram(null);
+            setError(null);
+            
+            if (window.innerWidth < 1024) {
+                setTimeout(() => {
+                    document.getElementById('details-panel')?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
     };
 
     const openEditForm = (program) => {
@@ -181,6 +213,7 @@ const AdminPrograms = () => {
         });
         setIsEditing(true);
         setIsFormOpen(true);
+        setError(null);
     };
 
     const handleLogout = () => {
@@ -192,41 +225,41 @@ const AdminPrograms = () => {
     return (
         <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] font-sans selection:bg-[#FF6D00] selection:text-white flex flex-col">
             
-            {/* MATCHING ADMIN TOP NAVIGATION */}
-            <div className="bg-[#1A237E] p-4 px-6 md:px-10 flex justify-between items-center text-white shadow-lg sticky top-0 z-50">
-                <div className="flex items-center gap-4">
-                    <Link to="/admin" className="hover:text-[#FF6D00] transition-colors text-2xl font-bold" title="Back to Dashboard">
+            {/* RESPONSIVE TOP NAVIGATION */}
+            <div className="bg-[#1A237E] p-4 px-4 md:px-10 flex justify-between items-center text-white shadow-lg sticky top-0 z-50">
+                <div className="flex items-center gap-3 md:gap-4 flex-1">
+                    <Link to="/admin" className="hover:text-[#FF6D00] transition-colors text-xl md:text-2xl font-bold" title="Back to Dashboard">
                         &larr;
                     </Link>
-                    <div className="text-lg md:text-2xl font-black tracking-tighter flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-[#FF6D00]"></span>
-                        TourismGov | Program Management
+                    <div className="text-base md:text-2xl font-black tracking-tighter flex items-center gap-2 truncate">
+                        <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-[#FF6D00] shrink-0"></span>
+                        <span className="truncate">TourismGov <span className="hidden sm:inline">| Program Management</span></span>
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4 md:gap-6 ml-4">
                     <div className="hidden md:flex flex-col items-end">
                         <span className="text-xs font-bold uppercase tracking-widest text-[#FF6D00]">{adminUser.role}</span>
                         <span className="text-sm font-black uppercase">{adminUser.name}</span>
                     </div>
                     <button 
                         onClick={handleLogout}
-                        className="bg-white/10 hover:bg-[#FF6D00] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors"
+                        className="bg-white/10 hover:bg-[#FF6D00] px-4 py-2 md:px-5 md:py-2 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-colors whitespace-nowrap shrink-0"
                     >
                         Log Out
                     </button>
                 </div>
             </div>
 
-            <main className="flex-1 max-w-screen-2xl w-full mx-auto p-6 md:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <main className="flex-1 max-w-screen-2xl w-full mx-auto p-4 md:p-6 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
                 
                 {/* LEFT PANEL: PROGRAM LIST */}
-                <div className="lg:col-span-4 flex flex-col gap-6">
-                    <div className="flex justify-between items-end">
-                        <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">Programs</h2>
+                <div className="lg:col-span-4 flex flex-col gap-4 md:gap-6">
+                    <div className="flex justify-between items-end mb-2 lg:mb-0">
+                        <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none">Programs</h2>
                         <button 
-                            onClick={openCreateForm} 
-                            className="bg-[#FF6D00] text-white font-black uppercase tracking-widest text-[10px] px-5 py-2.5 rounded-full shadow-lg hover:bg-[#1A237E] transition-all"
+                            onClick={handleToggleForm} 
+                            className="bg-[#FF6D00] text-white font-black uppercase tracking-widest text-[9px] md:text-[10px] px-4 py-2 md:px-5 md:py-2.5 rounded-full shadow-lg hover:bg-[#1A237E] transition-all whitespace-nowrap"
                         >
                             {isFormOpen && !isEditing ? 'Cancel Form' : '+ New Program'}
                         </button>
@@ -234,32 +267,32 @@ const AdminPrograms = () => {
 
                     {/* EMPTY STATE */}
                     {!loading && programs.length === 0 && (
-                        <div className="bg-white p-8 rounded-[2rem] border-2 border-dashed border-[#1A237E]/20 text-center flex flex-col items-center justify-center py-16 shadow-sm">
+                        <div className="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-[#1A237E]/20 text-center flex flex-col items-center justify-center py-12 md:py-16 shadow-sm">
                             <span className="text-2xl mb-4">📋</span>
-                            <h3 className="font-black text-xl uppercase text-[#1A237E] mb-2">No Programs Found</h3>
-                            <p className="font-medium text-sm opacity-60 mb-6">Initialize your first tourism program.</p>
-                            <button onClick={openCreateForm} className="bg-[#1A237E] text-white px-6 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-[#FF6D00] transition-colors">
+                            <h3 className="font-black text-lg md:text-xl uppercase text-[#1A237E] mb-2">No Programs Found</h3>
+                            <p className="font-medium text-xs md:text-sm opacity-60 mb-6 px-4">Initialize your first tourism program.</p>
+                            <button onClick={handleToggleForm} className="bg-[#1A237E] text-white px-5 md:px-6 py-3 rounded-full font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-[#FF6D00] transition-colors">
                                 Initialize First Program
                             </button>
                         </div>
                     )}
 
                     {/* LIST OF PROGRAMS */}
-                    <div className="flex flex-col gap-4 max-h-[75vh] overflow-y-auto pr-2">
+                    <div className="flex flex-col gap-3 md:gap-4 max-h-auto lg:max-h-[75vh] overflow-y-auto pr-1 lg:pr-2">
                         {programs.map(prog => (
                             <div 
                                 key={prog.programId} 
                                 onClick={() => handleSelectProgram(prog.programId)}
-                                className={`p-6 rounded-[1.5rem] cursor-pointer transition-all border ${selectedProgram?.programId === prog.programId ? 'bg-[#1A237E] text-white shadow-xl scale-[1.02]' : 'bg-white shadow-sm hover:shadow-md border-[#1A237E]/10 hover:border-[#FF6D00]/50'}`}
+                                className={`p-4 md:p-6 rounded-[1rem] md:rounded-[1.5rem] cursor-pointer transition-all border ${selectedProgram?.programId === prog.programId ? 'bg-[#1A237E] text-white shadow-xl scale-[1.02]' : 'bg-white shadow-sm hover:shadow-md border-[#1A237E]/10 hover:border-[#FF6D00]/50'}`}
                             >
                                 <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-black uppercase text-lg leading-tight truncate pr-4">{prog.title}</h3>
+                                    <h3 className="font-black uppercase text-base md:text-lg leading-tight line-clamp-2 pr-4">{prog.title}</h3>
                                 </div>
-                                <div className="flex justify-between items-center mt-4">
-                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${selectedProgram?.programId === prog.programId ? 'bg-white/20' : 'bg-[#FF6D00]/10 text-[#FF6D00]'}`}>
+                                <div className="flex justify-between items-center mt-3 md:mt-4">
+                                    <span className={`px-2 py-1 md:px-3 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest ${selectedProgram?.programId === prog.programId ? 'bg-white/20' : 'bg-[#FF6D00]/10 text-[#FF6D00]'}`}>
                                         {prog.status}
                                     </span>
-                                    <span className={`font-bold text-[10px] uppercase tracking-widest ${selectedProgram?.programId === prog.programId ? 'opacity-80' : 'opacity-50'}`}>
+                                    <span className={`font-bold text-[9px] md:text-[10px] uppercase tracking-widest ${selectedProgram?.programId === prog.programId ? 'opacity-80' : 'opacity-50'}`}>
                                         ${prog.budget?.toLocaleString()}
                                     </span>
                                 </div>
@@ -269,58 +302,69 @@ const AdminPrograms = () => {
                 </div>
 
                 {/* RIGHT PANEL: DETAILS & FORMS */}
-                <div className="lg:col-span-8">
+                <div id="details-panel" className="lg:col-span-8 scroll-mt-24">
                     
+                    {successMsg && (
+                        <div className="mb-4 md:mb-6 p-4 bg-green-50 border border-green-200 rounded-[1rem] flex items-center justify-between">
+                            <p className="text-green-700 font-bold text-[9px] md:text-[10px] uppercase tracking-widest">✅ {successMsg}</p>
+                            <button onClick={() => setSuccessMsg('')} className="text-green-700 hover:text-green-900">&times;</button>
+                        </div>
+                    )}
+
                     {error && (
-                        <div className="mb-6 p-4 bg-[#D81B60]/10 border border-[#D81B60]/20 rounded-[1rem]">
-                            <p className="text-[#D81B60] font-bold text-[10px] uppercase tracking-widest">Error: {error}</p>
+                        <div className="mb-4 md:mb-6 p-4 bg-[#D81B60]/10 border border-[#D81B60]/20 rounded-[1rem]">
+                            <p className="text-[#D81B60] font-bold text-[9px] md:text-[10px] uppercase tracking-widest">Error: {error}</p>
                         </div>
                     )}
 
                     {/* CREATE / EDIT FORM */}
                     {isFormOpen ? (
-                        <div className="bg-white p-8 md:p-10 rounded-[2rem] shadow-2xl border border-[#1A237E]/10 animate-fade-in-up">
-                            <h2 className="text-3xl font-black uppercase leading-none text-[#1A237E] mb-8">
+                        <div className="bg-white p-6 md:p-8 lg:p-10 rounded-[1.5rem] md:rounded-[2rem] shadow-2xl border border-[#1A237E]/10 animate-fade-in-up">
+                            <h2 className="text-2xl md:text-3xl font-black uppercase leading-none text-[#1A237E] mb-6 md:mb-8">
                                 {isEditing ? 'Edit Program' : 'Create New Program'}
                             </h2>
-                            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+                            <form onSubmit={handleSubmit} className="flex flex-col gap-4 md:gap-6">
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Program Title</label>
+                                    <label className="block text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Program Title</label>
                                     <input type="text" required value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
-                                        className="w-full px-6 py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] focus:bg-white outline-none transition-all font-bold" />
+                                        className="w-full px-5 py-3 md:px-6 md:py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] focus:bg-white outline-none transition-all font-bold text-sm md:text-base" />
                                 </div>
                                 
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Description</label>
+                                    <label className="block text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Description</label>
                                     <textarea required value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3"
-                                        className="w-full px-6 py-4 bg-[#F8F9FF] rounded-[1.5rem] border-2 border-transparent focus:border-[#FF6D00] focus:bg-white outline-none transition-all font-medium" />
+                                        className="w-full px-5 py-3 md:px-6 md:py-4 bg-[#F8F9FF] rounded-[1.5rem] border-2 border-transparent focus:border-[#FF6D00] focus:bg-white outline-none transition-all font-medium text-sm md:text-base" />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Start Date</label>
+                                        <label className="block text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Start Date</label>
                                         <input type="date" required value={formData.startDate} onChange={e => setFormData({...formData, startDate: e.target.value})}
-                                            className="w-full px-6 py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] outline-none font-bold text-gray-600" />
+                                            className="w-full px-5 py-3 md:px-6 md:py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] outline-none font-bold text-gray-600 text-sm md:text-base" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">End Date</label>
+                                        <label className="block text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">End Date</label>
                                         <input type="date" required value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})}
-                                            className="w-full px-6 py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] outline-none font-bold text-gray-600" />
+                                            className="w-full px-5 py-3 md:px-6 md:py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] outline-none font-bold text-gray-600 text-sm md:text-base" />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Total Budget Allocation (USD)</label>
+                                    <label className="block text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Total Budget Allocation (USD)</label>
                                     <input type="number" required min="0" value={formData.budget} onChange={e => setFormData({...formData, budget: e.target.value})}
-                                        className="w-full px-6 py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] outline-none font-bold" />
+                                        className="w-full px-5 py-3 md:px-6 md:py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] outline-none font-bold text-sm md:text-base" />
                                 </div>
 
-                                <div className="flex justify-end gap-4 mt-4">
-                                    <button type="button" onClick={() => setIsFormOpen(false)} className="px-8 py-4 rounded-full font-black uppercase text-[10px] tracking-widest text-[#1A237E] hover:bg-gray-100 transition-colors">
+                                <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 md:gap-4 mt-2 md:mt-4">
+                                    <button type="button" onClick={() => setIsFormOpen(false)} className="w-full sm:w-auto px-6 md:px-8 py-3 md:py-4 rounded-full font-black uppercase text-[10px] tracking-widest text-[#1A237E] hover:bg-gray-100 transition-colors">
                                         Cancel
                                     </button>
-                                    <button type="submit" className="bg-[#1A237E] text-white px-10 py-4 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-[#FF6D00] shadow-xl transition-all hover:-translate-y-1">
-                                        {isEditing ? 'Save Changes' : 'Initialize Program'}
+                                    <button 
+                                        type="submit" 
+                                        disabled={isSubmitting}
+                                        className={`w-full sm:w-auto bg-[#1A237E] text-white px-8 md:px-10 py-3 md:py-4 rounded-full font-black uppercase text-[10px] tracking-widest shadow-xl transition-all ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#FF6D00] hover:-translate-y-1'}`}
+                                    >
+                                        {isSubmitting ? 'Saving...' : (isEditing ? 'Save Changes' : 'Initialize Program')}
                                     </button>
                                 </div>
                             </form>
@@ -328,18 +372,18 @@ const AdminPrograms = () => {
                     ) : selectedProgram ? (
                         
                         /* DETAILS DASHBOARD */
-                        <div className="bg-white p-8 md:p-10 rounded-[2rem] shadow-2xl border border-[#1A237E]/10 animate-fade-in-up">
+                        <div className="bg-white p-6 md:p-8 lg:p-10 rounded-[1.5rem] md:rounded-[2rem] shadow-2xl border border-[#1A237E]/10 animate-fade-in-up">
                             
                             {/* Header Panel */}
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[#1A237E]/10 pb-8 mb-8 gap-4">
-                                <div>
-                                    <span className="bg-[#FF6D00] text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-3 inline-block">Program ID: {selectedProgram.programId}</span>
-                                    <h2 className="text-4xl font-black uppercase leading-none text-[#1A237E] mb-3">{selectedProgram.title}</h2>
-                                    <p className="font-bold text-xs uppercase tracking-widest opacity-50">{selectedProgram.startDate} TO {selectedProgram.endDate}</p>
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[#1A237E]/10 pb-6 md:pb-8 mb-6 md:mb-8 gap-4">
+                                <div className="w-full md:w-auto">
+                                    <span className="bg-[#FF6D00] text-white px-3 py-1 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-3 inline-block">Program ID: {selectedProgram.programId}</span>
+                                    <h2 className="text-2xl md:text-4xl font-black uppercase leading-tight md:leading-none text-[#1A237E] mb-2 md:mb-3">{selectedProgram.title}</h2>
+                                    <p className="font-bold text-[10px] md:text-xs uppercase tracking-widest opacity-50">{selectedProgram.startDate} TO {selectedProgram.endDate}</p>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
                                     <select 
-                                        className={`px-4 py-3 rounded-full text-[10px] font-black uppercase tracking-widest outline-none border-2 cursor-pointer transition-colors ${selectedProgram.status === 'CANCELLED' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-[#F8F9FF] border-[#1A237E]/10 text-[#1A237E]'}`}
+                                        className={`w-full md:w-auto px-4 py-3 rounded-full text-[9px] md:text-[10px] font-black uppercase tracking-widest outline-none border-2 cursor-pointer transition-colors ${selectedProgram.status === 'CANCELLED' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-[#F8F9FF] border-[#1A237E]/10 text-[#1A237E]'}`}
                                         value={selectedProgram.status} 
                                         onChange={(e) => handleStatusChange(selectedProgram.programId, e.target.value)}
                                         disabled={selectedProgram.status === 'CANCELLED'}
@@ -354,60 +398,60 @@ const AdminPrograms = () => {
 
                             {/* Budget Report Analysis */}
                             {budgetReport && (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                                    <div className="bg-[#1A237E] text-white p-6 rounded-[1.5rem] shadow-lg">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Total Budget</p>
-                                        <p className="text-3xl font-black">${budgetReport.totalBudget?.toLocaleString()}</p>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+                                    <div className="bg-[#1A237E] text-white p-5 md:p-6 rounded-[1rem] md:rounded-[1.5rem] shadow-lg">
+                                        <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">Total Budget</p>
+                                        <p className="text-2xl md:text-3xl font-black truncate">${budgetReport.totalBudget?.toLocaleString()}</p>
                                     </div>
-                                    <div className="bg-[#FFFDF7] border-2 border-[#1A237E]/10 p-6 rounded-[1.5rem]">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#1A237E] mb-1">Funds Expended</p>
-                                        <p className="text-3xl font-black text-[#D81B60]">${budgetReport.amountSpent?.toLocaleString()}</p>
+                                    <div className="bg-[#FFFDF7] border-2 border-[#1A237E]/10 p-5 md:p-6 rounded-[1rem] md:rounded-[1.5rem]">
+                                        <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#1A237E] mb-1">Funds Expended</p>
+                                        <p className="text-2xl md:text-3xl font-black text-[#D81B60] truncate">${budgetReport.amountSpent?.toLocaleString()}</p>
                                     </div>
-                                    <div className="bg-[#FFFDF7] border-2 border-[#FF6D00]/20 p-6 rounded-[1.5rem]">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#FF6D00] mb-1">Remaining</p>
-                                        <p className="text-3xl font-black text-[#004D40]">${budgetReport.remainingBudget?.toLocaleString()}</p>
+                                    <div className="bg-[#FFFDF7] border-2 border-[#FF6D00]/20 p-5 md:p-6 rounded-[1rem] md:rounded-[1.5rem]">
+                                        <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#FF6D00] mb-1">Remaining</p>
+                                        <p className="text-2xl md:text-3xl font-black text-[#004D40] truncate">${budgetReport.remainingBudget?.toLocaleString()}</p>
                                     </div>
                                 </div>
                             )}
 
                             {/* RESOURCES SECTION */}
-                            <div className="mt-8 border-t border-[#1A237E]/10 pt-8">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-2xl font-black uppercase text-[#1A237E]">Resources</h3>
-                                    <button onClick={() => setShowResourceForm(!showResourceForm)} className="text-[#FF6D00] font-bold uppercase text-[10px] tracking-widest hover:text-[#1A237E]">
+                            <div className="mt-6 md:mt-8 border-t border-[#1A237E]/10 pt-6 md:pt-8">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-3 sm:gap-0">
+                                    <h3 className="text-xl md:text-2xl font-black uppercase text-[#1A237E]">Resources</h3>
+                                    <button onClick={() => setShowResourceForm(!showResourceForm)} className="text-[#FF6D00] font-bold uppercase text-[9px] md:text-[10px] tracking-widest hover:text-[#1A237E]">
                                         {showResourceForm ? 'Cancel' : '+ Allocate Resource'}
                                     </button>
                                 </div>
 
                                 {showResourceForm && (
-                                    <form onSubmit={handleAllocateResource} className="bg-[#F8F9FF] p-5 rounded-[1.5rem] border border-[#1A237E]/10 mb-6 flex gap-4 items-center">
-                                        <select required className="flex-1 px-4 py-3 bg-white rounded-full border-none focus:ring-2 focus:ring-[#FF6D00] text-xs font-bold uppercase outline-none"
+                                    <form onSubmit={handleAllocateResource} className="bg-[#F8F9FF] p-4 md:p-5 rounded-[1rem] md:rounded-[1.5rem] border border-[#1A237E]/10 mb-6 flex flex-col md:flex-row gap-3 md:gap-4 items-stretch md:items-center">
+                                        <select required className="w-full md:flex-1 px-4 py-3 bg-white rounded-full border-none focus:ring-2 focus:ring-[#FF6D00] text-xs font-bold uppercase outline-none"
                                             value={resourceForm.type} onChange={e => setResourceForm({...resourceForm, type: e.target.value})}>
                                             <option value="FUNDS">Funds</option>
                                             <option value="STAFF">Staff</option>
                                             <option value="EQUIPMENT">Equipment</option>
                                             <option value="TRANSPORT">Transport</option>
                                         </select>
-                                        <input type="number" placeholder="Quantity/Amount" required className="flex-1 px-4 py-3 bg-white rounded-full border-none focus:ring-2 focus:ring-[#FF6D00] text-sm outline-none"
+                                        <input type="number" placeholder="Quantity/Amount" required className="w-full md:flex-1 px-4 py-3 bg-white rounded-full border-none focus:ring-2 focus:ring-[#FF6D00] text-sm outline-none"
                                             value={resourceForm.quantity} onChange={e => setResourceForm({...resourceForm, quantity: e.target.value})} />
-                                        <button type="submit" className="bg-[#1A237E] text-white font-black uppercase text-[10px] px-6 py-3 rounded-full hover:bg-[#FF6D00]">Add</button>
+                                        <button type="submit" className="w-full md:w-auto bg-[#1A237E] text-white font-black uppercase text-[10px] px-6 py-3 rounded-full hover:bg-[#FF6D00]">Add</button>
                                     </form>
                                 )}
 
                                 <div className="space-y-3">
                                     {resources.length === 0 ? <p className="text-sm opacity-50 italic">No resources allocated yet.</p> : null}
                                     {resources.map(res => (
-                                        <div key={res.resourceId} className="flex items-center justify-between p-4 bg-white border border-[#1A237E]/10 rounded-full shadow-sm hover:border-[#FF6D00]/30 transition-colors">
-                                            <div className="flex items-center gap-4">
-                                                <span className="bg-[#1A237E] text-white w-10 h-10 flex items-center justify-center rounded-full text-[10px] font-black uppercase">{res.type.substring(0,3)}</span>
+                                        <div key={res.resourceId} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-4 bg-white border border-[#1A237E]/10 rounded-[1rem] md:rounded-full shadow-sm hover:border-[#FF6D00]/30 transition-colors gap-3 sm:gap-0">
+                                            <div className="flex items-center gap-3 md:gap-4">
+                                                <span className="bg-[#1A237E] text-white w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full text-[8px] md:text-[10px] font-black uppercase shrink-0">{res.type.substring(0,3)}</span>
                                                 <div>
-                                                    <p className="font-black text-sm uppercase text-[#1A237E]">{res.type}</p>
-                                                    <p className="font-bold text-[10px] uppercase opacity-50">Qty: {res.quantity}</p>
+                                                    <p className="font-black text-xs md:text-sm uppercase text-[#1A237E] leading-tight">{res.type}</p>
+                                                    <p className="font-bold text-[9px] md:text-[10px] uppercase opacity-50">Qty: {res.quantity}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-4 items-center">
+                                            <div className="flex gap-4 items-center w-full sm:w-auto justify-between sm:justify-end pl-11 sm:pl-0">
                                                 <select 
-                                                    className="bg-transparent text-[9px] font-bold uppercase outline-none text-[#FF6D00] cursor-pointer"
+                                                    className="bg-transparent text-[8px] md:text-[9px] font-bold uppercase outline-none text-[#FF6D00] cursor-pointer"
                                                     value={res.status} onChange={(e) => handleUpdateResourceStatus(res.resourceId, e.target.value)}
                                                 >
                                                     <option value="ALLOCATED">Allocated</option>
@@ -415,7 +459,7 @@ const AdminPrograms = () => {
                                                     <option value="EXPENDED">Expended</option>
                                                     <option value="CANCELLED">Cancelled</option>
                                                 </select>
-                                                <button onClick={() => handleDeleteResource(res.resourceId)} className="text-[#D81B60] hover:text-red-800 text-lg leading-none font-bold" title="Delete Resource">&times;</button>
+                                                <button onClick={() => handleDeleteResource(res.resourceId)} className="text-[#D81B60] hover:text-red-800 text-lg md:text-xl leading-none font-bold" title="Delete Resource">&times;</button>
                                             </div>
                                         </div>
                                     ))}
@@ -423,17 +467,17 @@ const AdminPrograms = () => {
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex gap-4 pt-8 mt-8 border-t border-[#1A237E]/10">
-                                <button onClick={() => openEditForm(selectedProgram)} className="flex-1 bg-[#1A237E]/5 text-[#1A237E] py-4 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-[#1A237E] hover:text-white transition-colors">
+                            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 pt-6 md:pt-8 mt-6 md:mt-8 border-t border-[#1A237E]/10">
+                                <button onClick={() => openEditForm(selectedProgram)} className="w-full sm:flex-1 bg-[#1A237E]/5 text-[#1A237E] py-3 md:py-4 rounded-full font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-[#1A237E] hover:text-white transition-colors">
                                     Edit Details
                                 </button>
-                                <button onClick={() => handleDelete(selectedProgram.programId)} className="flex-1 bg-red-50 text-red-600 py-4 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition-colors">
+                                <button onClick={() => handleDelete(selectedProgram.programId)} className="w-full sm:flex-1 bg-red-50 text-red-600 py-3 md:py-4 rounded-full font-black uppercase text-[9px] md:text-[10px] tracking-widest hover:bg-red-600 hover:text-white transition-colors">
                                     Delete Program
                                 </button>
                             </div>
                         </div>
                     ) : (
-                        <div className="h-full min-h-[500px] flex flex-col items-center justify-center border-2 border-dashed border-[#1A237E]/20 rounded-[2rem] bg-white/50">
+                        <div className="hidden lg:flex h-full min-h-[500px] flex-col items-center justify-center border-2 border-dashed border-[#1A237E]/20 rounded-[2rem] bg-white/50">
                             <span className="text-4xl mb-4 opacity-50">👆</span>
                             <p className="font-bold text-sm uppercase tracking-widest opacity-40">Select a program to view details</p>
                         </div>
