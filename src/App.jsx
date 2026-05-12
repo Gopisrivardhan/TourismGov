@@ -3,11 +3,11 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import TouristDashboard from './pages/TouristDashboard';
+import TouristDashboard from './modules/TouristRegistration_Management/TouristDashboard';
 import OfficerDashboard from './pages/OfficerDashboard';
 import GovernanceDashboard from './pages/GovernanceDashboard';
-import AdminEvents from './pages/AdminEvents';
-import TouristEvents from './pages/TouristEvents';
+import AdminEvents from './modules/Events_Booking/AdminEvents';
+import TouristEvents from './modules/Events_Booking/TouristEvents';
 function App() {
   return (
     <Router>

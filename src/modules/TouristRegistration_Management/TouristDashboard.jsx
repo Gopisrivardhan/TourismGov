@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import DocumentManager from '../pages/DocumentManager'; // Ensure correct path
+import api from '../../services/api';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
+import DocumentManager from './DocumentManager'; // Ensure correct path
 import { jwtDecode } from 'jwt-decode';
 
 const TouristDashboard = () => {
