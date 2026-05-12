@@ -1,22 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar'; 
 import Footer from '../components/Footer'; 
+import { notificationApi } from '../services/api'; // Integrated for Module 8
 
 const Home = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
-    // LOGIC: Check if user is logged in to update the Navbar UI
     useEffect(() => {
         const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
         setIsLoggedIn(!!token);
+
+        // Fetch real notification count if logged in (Module 8)
+        if (token && userId) {
+            notificationApi.getUnread()
+                .then(res => setUnreadCount(res.data.length))
+                .catch(err => console.error("Notification Sync Failed", err));
+        }
     }, []);
 
     return (
-        <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] selection:bg-[#FF6D00] selection:text-white">
+        <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] selection:bg-[#FF6D00] selection:text-white font-sans">
 
-            {/* UPDATED: Passing isLoggedIn to Navbar so it shows Dashboard/Reports/Bell */}
-            <Navbar isLoggedIn={isLoggedIn} />
+            {/* FIXED: Passing unreadNotifications so the Navbar badge actually works */}
+            <Navbar isLoggedIn={isLoggedIn} unreadNotifications={unreadCount} />
 
             {/* HEADER WITH VIDEO */}
             <header className="p-3 md:p-6 h-[85vh] min-h-[500px] max-h-[700px]">
@@ -26,14 +34,12 @@ const Home = () => {
                         loop
                         muted
                         playsInline
+                        poster="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&q=80&w=1200"
                         className="absolute inset-0 w-full h-full object-cover opacity-60"
                     >
-                        {/* NOTE: Replaced YouTube link with a direct MP4 link. 
-                            YouTube links only work in <iframe>, not <video> tags. */}
                         <source src="https://assets.mixkit.co/videos/preview/mixkit-taj-mahal-in-india-4067-large.mp4" type="video/mp4" />
                     </video>
                     
-                    {/* Gradient Overlay for Text Readability */}
                     <div className="absolute inset-0 bg-gradient-to-t from-[#1A237E]/95 via-[#1A237E]/40 to-transparent"></div>
 
                     <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-12 lg:px-20 pt-24">
@@ -45,92 +51,73 @@ const Home = () => {
                             Experience vibrant heritage, book cultural events, and manage your journey through the official tourism portal.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row w-full max-w-2xl bg-white/10 sm:bg-white/20 backdrop-blur-md rounded-3xl sm:rounded-full p-1.5 border border-white/20 shadow-xl gap-2 sm:gap-0">
+                        <form className="flex flex-col sm:flex-row w-full max-w-2xl bg-white/10 sm:bg-white/20 backdrop-blur-md rounded-3xl sm:rounded-full p-1.5 border border-white/20 shadow-xl gap-2 sm:gap-0">
                             <input
                                 type="text"
                                 placeholder="Search forts, festivals, states..."
                                 className="flex-1 px-5 py-3 sm:px-6 sm:py-3 bg-transparent border-none focus:outline-none text-sm md:text-base text-white placeholder-white/70 font-medium"
                             />
-                            <button className="w-full sm:w-auto bg-white text-[#1A237E] px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest hover:bg-[#FF6D00] hover:text-white transition-colors">
+                            <button className="w-full sm:w-auto bg-white text-[#1A237E] px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-[#FF6D00] hover:text-white transition-all">
                                 Explore
                             </button>
-                        </div>
+                        </form>
                     </div>
                 </div>
             </header>
 
             {/* MAIN DESTINATIONS GRID */}
             <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-16 lg:py-20">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4 text-[#1A237E]">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-4">
                     <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter leading-none">Featured<br />Destinations</h2>
-                    <a href="#" className="inline-flex items-center gap-2 font-bold text-xs uppercase tracking-widest hover:text-[#FF6D00] transition-colors">
-                        Explore Map <span className="text-lg md:text-xl">&rarr;</span>
+                    <a href="#" className="inline-flex items-center gap-2 font-bold text-[10px] uppercase tracking-[0.2em] hover:text-[#FF6D00] transition-colors">
+                        Explore Map <span className="text-xl">&rarr;</span>
                     </a>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 lg:h-[500px]">
-
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 lg:h-[550px]">
                     {/* Jaipur */}
-                    <div className="lg:col-span-4 min-h-[300px] lg:min-h-0 relative rounded-[2rem] overflow-hidden group shadow-xl">
+                    <div className="lg:col-span-4 min-h-[350px] lg:min-h-0 relative rounded-[2.5rem] overflow-hidden group shadow-2xl">
                         <img
                             src="https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&q=80&w=800"
                             alt="Rajasthan"
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A237E]/90 to-transparent flex flex-col justify-end p-8">
-                            <span className="bg-[#FF6D00] text-white self-start px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">Heritage</span>
-                            <h3 className="text-3xl font-black text-white uppercase leading-none">Jaipur<br />Palaces</h3>
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A237E]/95 via-transparent flex flex-col justify-end p-10">
+                            <span className="bg-[#FF6D00] text-white self-start px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest mb-4">Heritage</span>
+                            <h3 className="text-3xl font-black text-white uppercase leading-none tracking-tighter">Jaipur<br />Palaces</h3>
                         </div>
                     </div>
 
-                    {/* Kerala & Camel Fair Stack */}
+                    {/* Stacked Kerala & Pushkar */}
                     <div className="lg:col-span-4 flex flex-col gap-6 h-full">
-                        <div className="min-h-[200px] lg:min-h-0 flex-1 relative rounded-[2rem] overflow-hidden group shadow-xl">
-                            <img
-                                src="https://www.touracle.in/wp-content/uploads/2025/01/kerala.webp"
-                                alt="Kerala"
-                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#004D40]/90 via-[#004D40]/20 to-transparent flex flex-col justify-end p-6 md:p-8">
-                                <h3 className="text-2xl font-black text-white uppercase leading-none">Kerala<br />Backwaters</h3>
+                        <div className="flex-1 relative rounded-[2.5rem] overflow-hidden group shadow-xl">
+                            <img src="https://www.touracle.in/wp-content/uploads/2025/01/kerala.webp" alt="Kerala" className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#004D40]/90 via-transparent flex flex-col justify-end p-8">
+                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Kerala<br />Backwaters</h3>
                             </div>
                         </div>
-
-                        <div className="min-h-[200px] lg:min-h-0 flex-1 relative rounded-[2rem] overflow-hidden group shadow-xl">
-                            <img
-                                src="https://production-nuego-cms.blr1.digitaloceanspaces.com/static-contents/prod-v1/The_Spirit_of_Pushkar_Mela_shutterstock_566311246_750_X_450_px_b27b2ae0ab.webp"
-                                alt="Pushkar Camel Fair"
-                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#880E4F]/95 via-[#880E4F]/40 to-transparent"></div>
-                            <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-center text-white">
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-90 mb-1">Upcoming Event</span>
-                                <h3 className="text-2xl font-black uppercase leading-tight mb-4">Pushkar<br />Camel Fair</h3>
-                                <button className="self-start bg-white text-[#D81B60] font-black uppercase tracking-widest text-[9px] px-5 py-2.5 rounded-full hover:bg-[#1A237E] hover:text-white transition-all shadow-lg">
-                                    Book Now
-                                </button>
+                        <div className="flex-1 relative rounded-[2.5rem] overflow-hidden group shadow-xl bg-[#880E4F]">
+                            <img src="https://production-nuego-cms.blr1.digitaloceanspaces.com/static-contents/prod-v1/The_Spirit_of_Pushkar_Mela_shutterstock_566311246_750_X_450_px_b27b2ae0ab.webp" alt="Pushkar" className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:scale-110 transition-transform duration-1000" />
+                            <div className="absolute inset-0 p-8 flex flex-col justify-center text-white">
+                                <span className="text-[8px] font-black uppercase tracking-widest text-[#FF6D00] mb-1">Live Event</span>
+                                <h3 className="text-2xl font-black uppercase tracking-tighter mb-4 leading-none">Pushkar<br />Fair</h3>
+                                <button className="self-start bg-white text-[#1A237E] font-black uppercase tracking-widest text-[8px] px-6 py-2.5 rounded-full hover:bg-[#FF6D00] hover:text-white transition-all">Book Spot</button>
                             </div>
                         </div>
                     </div>
 
                     {/* Taj Mahal */}
-                    <div className="lg:col-span-4 min-h-[300px] lg:min-h-0 relative rounded-t-[4rem] rounded-b-[2rem] md:rounded-t-[8rem] overflow-hidden group shadow-xl">
-                        <img
-                            src="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&q=80&w=800"
-                            alt="Taj Mahal"
-                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A237E]/90 to-transparent flex flex-col justify-end p-8">
-                            <span className="bg-white text-[#1A237E] self-start px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest mb-3">Monument</span>
-                            <h3 className="text-3xl font-black text-white uppercase leading-none">The Taj<br />Mahal</h3>
+                    <div className="lg:col-span-4 min-h-[350px] lg:min-h-0 relative rounded-t-[10rem] rounded-b-[2.5rem] overflow-hidden group shadow-2xl">
+                        <img src="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&q=80&w=800" alt="Taj Mahal" className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#1A237E]/95 via-transparent flex flex-col justify-end p-10">
+                            <span className="bg-white text-[#1A237E] self-start px-3 py-1 rounded-md text-[8px] font-black uppercase tracking-widest mb-4">Iconic</span>
+                            <h3 className="text-3xl font-black text-white uppercase leading-none tracking-tighter">The Taj<br />Mahal</h3>
                         </div>
                     </div>
-
                 </div>
             </main>
 
             <Footer />
-            
         </div>
     );
 };

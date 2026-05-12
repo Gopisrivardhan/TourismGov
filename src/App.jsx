@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // --- COMPONENTS ---
@@ -8,26 +8,41 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard'; // Your unified Dashboard
-import ReportPage from './pages/ReportPage'; // Your Intelligence Reports
+import Dashboard from './pages/Dashboard'; 
+import ReportPage from './pages/ReportPage';
+import NotificationsPage from './pages/NotificationsPage'; // NEW: Module 8
 
 function App() {
-  // --- GLOBAL STATE ---
-  // In a real app, this would be updated by your Login logic or a Context Provider
+  // --- SYNC STATE WITH LOCALSTORAGE ---
+  // This ensures the login "sticks" even after a page refresh
   const [authState, setAuthState] = useState({
-    isLoggedIn: true,       // Toggle to false to see the Login view
-    userRole: "ADMIN",     // Roles: "ADMIN", "OFFICER", "COMPLIANCE", "TOURIST"
-    userName: "Omkar",
-    unreadNotifications: 5
+    isLoggedIn: !!localStorage.getItem('token'), 
+    userRole: localStorage.getItem('role') || "TOURIST", 
+    userName: localStorage.getItem('name') || "User",
+    unreadNotifications: 3
   });
+
+  // Listen for changes (Useful for your Login.jsx reload logic)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    const name = localStorage.getItem('name');
+    
+    if (token) {
+      setAuthState(prev => ({
+        ...prev,
+        isLoggedIn: true,
+        userRole: role,
+        userName: name
+      }));
+    }
+  }, []);
 
   return (
     <Router>
       <div className="relative min-h-screen bg-[#FFFDF7]">
         
-        {/* NAVBAR: Global component 
-          This ensures the Notification Hub is visible on EVERY page 
-        */}
+        {/* NAVBAR: Pass real state to show/hide Dashboard, Reports, and Bell */}
         <Navbar 
           isLoggedIn={authState.isLoggedIn} 
           userRole={authState.userRole} 
@@ -37,18 +52,13 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={
-            <Home 
-              isLoggedIn={authState.isLoggedIn} 
-              userRole={authState.userRole} 
-            />
+            <Home isLoggedIn={authState.isLoggedIn} userRole={authState.userRole} />
           } />
           
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* DASHBOARD ROUTE: 
-             One route that dynamically changes content based on authState.userRole
-          */}
+          {/* DASHBOARD ROUTE: Uses role from localStorage to call DashboardServiceImpl */}
           <Route path="/dashboard" element={
             authState.isLoggedIn ? (
               <Dashboard 
@@ -60,16 +70,22 @@ function App() {
             )
           } />
 
-          {/* REPORTS ROUTE: 
-             Matches your ReportServiceImpl.java logic (Tourists get "Access Denied")
-          */}
+          {/* REPORTS ROUTE (Module 7): Validates role before loading ReportPage */}
           <Route path="/reports" element={
             authState.isLoggedIn ? (
               <ReportPage 
                 isLoggedIn={authState.isLoggedIn} 
                 userRole={authState.userRole} 
-                unreadNotifications={authState.unreadNotifications}
               />
+            ) : (
+              <Navigate to="/login" />
+            )
+          } />
+
+          {/* NOTIFICATIONS ROUTE (Module 8): Maps to NotificationServiceImpl */}
+          <Route path="/notifications" element={
+            authState.isLoggedIn ? (
+              <NotificationsPage />
             ) : (
               <Navigate to="/login" />
             )
