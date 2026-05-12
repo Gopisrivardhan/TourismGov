@@ -11,6 +11,12 @@ import AdminPrograms from './pages/AdminPrograms';
 import TouristPrograms from './pages/TouristPrograms';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminHeritageSites from './pages/AdminSite';
+import MainDashboard from './pages/MainDashboard';
+import ReportsPage from './pages/ReportsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './components/DashboardLayout';
+
 function App() {
   return (
     <Router>
@@ -26,6 +32,11 @@ function App() {
         <Route path="/dashboard" element={<TouristDashboard />} />
         <Route path="/GovernanceDashboard" element={<GovernanceDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
+        
+        {/* NEW UNIFIED ROUTES */}
+        <Route path="/main-dashboard" element={<ProtectedRoute><DashboardLayout><MainDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><DashboardLayout><ReportsPage /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><DashboardLayout><NotificationsPage /></DashboardLayout></ProtectedRoute>} />
       </Routes>
     </Router>
   );

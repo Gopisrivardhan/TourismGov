@@ -1,0 +1,58 @@
+/* ReportsPage.css */
+
+.reports-container {
+    min-height: 100vh;
+    background-color: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    font-family: sans-serif;
+}
+
+.reports-main {
+    flex: 1;
+    max-width: 80rem;
+    margin: 0 auto;
+    width: 100%;
+    padding: 8rem 1.5rem 5rem 1.5rem;
+}
+
+.reports-panel {
+    background-color: white;
+    border-radius: 2rem;
+    padding: 2rem;
+    border: 1px solid white;
+}
+
+.generate-panel {
+    box-shadow: 0 20px 25px -5px rgba(224, 231, 255, 0.5);
+    position: sticky;
+    top: 8rem;
+    height: max-content;
+}
+
+.history-panel {
+    box-shadow: 0 20px 25px -5px rgba(241, 245, 249, 0.5);
+}
+
+.history-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    background-color: #f8fafc;
+    border: 1px solid #f1f5f9;
+    transition: all 0.2s ease;
+}
+
+@media (min-width: 640px) {
+    .history-item {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+.history-item:hover {
+    border-color: #c7d2fe;
+    background-color: rgba(238, 242, 255, 0.3);
+}
