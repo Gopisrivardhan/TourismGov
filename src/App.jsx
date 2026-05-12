@@ -5,6 +5,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import TouristDashboard from './pages/TouristDashboard';
 import OfficerDashboard from './pages/OfficerDashboard';
+import GovernanceDashboard from './pages/GovernanceDashboard';
+import AdminEvents from './pages/AdminEvents';
+import TouristEvents from './pages/TouristEvents';
 function App() {
   return (
     <Router>
@@ -14,6 +17,9 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<TouristDashboard />} />
         <Route path="/officer-dashboard" element={<OfficerDashboard />} />
+        <Route path="/GovernanceDashboard" element={<GovernanceDashboard />} />
+        <Route path="/admin" element={<AdminEvents />} />
+        <Route path="/tourist" element={<TouristEvents />} />
       </Routes>
     </Router>
   );
