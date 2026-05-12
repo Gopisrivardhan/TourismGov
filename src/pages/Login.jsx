@@ -47,16 +47,8 @@ const Login = () => {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data));
 
-        // 2. Route based on the user's role!
-        const userRole = response.data.role;
-
-        if (userRole === 'ADMIN' || userRole === 'OFFICER') {
-          // Send government staff to the admin dashboard
-          navigate('/admin');
-        } else {
-          // Send standard citizens to the tourist dashboard
-          navigate('/dashboard');
-        }
+        // 2. Route EVERYONE to the unified smart dashboard
+        navigate('/main-dashboard');
       }
 
     } catch (error) {
