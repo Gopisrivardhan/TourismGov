@@ -42,7 +42,10 @@ const OfficerDashboard = () => {
             const { data } = await api.get(`/tourismgov/v1/tourist/${touristId}`);
             setSelectedTourist(data);
             setVerifyForm({ status: 'VERIFIED', remarks: '' });
-        } catch { alert("Profile fetch failed"); }
+        } catch (error) { 
+            alert("Profile fetch failed. Check backend endpoint."); 
+            console.error(error);
+        }
     };
 
     const handleVerify = async (docId) => {
@@ -67,14 +70,13 @@ const OfficerDashboard = () => {
         } catch { alert("Error: 404 Not Found."); }
     };
 
-    // --- NEW: Delete Tourist Logic ---
     const handleDeleteTourist = async (e, id) => {
-        if (e) e.stopPropagation(); // Prevents the row click (modal) from opening
+        if (e) e.stopPropagation(); 
         
         if (window.confirm('Are you sure you want to permanently delete this tourist?')) {
             try {
                 await api.delete(`/tourismgov/v1/tourist/${id}`);
-                if (selectedTourist?.touristId === id) setSelectedTourist(null); // Close modal if open
+                if (selectedTourist?.touristId === id) setSelectedTourist(null);
                 fetchTourists(); 
             } catch {
                 alert('Delete failed. Please try again.');
@@ -91,7 +93,6 @@ const OfficerDashboard = () => {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
             
-            {/* --- ADMIN HEADER --- */}
             <div className="bg-[#1A237E] p-4 px-6 md:px-10 flex justify-between items-center text-white shadow-lg sticky top-0 z-50">
                 <Link to="/admin" className="text-lg md:text-2xl font-black tracking-tighter flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <span className="w-3 h-3 rounded-full bg-[#FF6D00]" /> TourismGov
@@ -107,10 +108,8 @@ const OfficerDashboard = () => {
                 </div>
             </div>
 
-            {/* --- MAIN CONTENT --- */}
             <main className="flex-1 max-w-5xl mx-auto w-full p-6 pt-10 pb-20">
                 
-                {/* Back Button */}
                 <div className="mb-6">
                     <Link to="/admin" className="inline-block text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#FF6D00] transition-colors">
                         ← Back to Dashboard
@@ -141,7 +140,7 @@ const OfficerDashboard = () => {
                                 <th className="p-4">ID</th>
                                 <th className="p-4">Tourist Name</th>
                                 <th className="p-4 text-center">Status</th>
-                                <th className="p-4 text-right">Actions</th> {/* NEW ACTIONS COLUMN */}
+                                <th className="p-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -159,7 +158,6 @@ const OfficerDashboard = () => {
                                         </span>
                                     </td>
                                     <td className="p-4 text-right">
-                                        {/* NEW DELETE BUTTON IN TABLE */}
                                         <button 
                                             onClick={(e) => handleDeleteTourist(e, t.touristId)}
                                             className="text-[9px] font-black uppercase tracking-widest text-red-500 hover:text-white bg-red-50 hover:bg-red-500 px-4 py-2 rounded-full transition-colors shadow-sm"
@@ -191,7 +189,6 @@ const OfficerDashboard = () => {
                             </div>
                             
                             <div className="flex items-center gap-4">
-                                {/* NEW DELETE BUTTON IN MODAL */}
                                 <button 
                                     onClick={(e) => handleDeleteTourist(e, selectedTourist.touristId)}
                                     className="text-[9px] font-black uppercase text-red-500 hover:bg-red-50 px-3 py-1 rounded-full transition-colors tracking-widest"

@@ -8,12 +8,9 @@ import Register from './pages/Register';
 import AdminPrograms from './modules/Program_Resource/AdminPrograms';
 import TouristPrograms from './modules/Program_Resource/TouristPrograms';
 import AdminDashboard from './modules/Admin/AdminDashboard';
-
-// Modules: Tourist Registration & Management
 import TouristDashboard from './modules/TouristRegistration_Management/TouristDashboard';
 import OfficerDashboard from './modules/TouristRegistration_Management/OfficerDashboard';
-
-// Modules: Events Booking
+import CompleteProfile from './modules/TouristRegistration_Management/CompleteProfile';
 import AdminEvents from './modules/Events_Booking/AdminEvents';
 import TouristEvents from './modules/Events_Booking/TouristEvents';
 
@@ -24,6 +21,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/admin/events" element={<AdminEvents />} />
         <Route path="/events" element={<TouristEvents />} />
         <Route path="/programs" element={<TouristPrograms />} />

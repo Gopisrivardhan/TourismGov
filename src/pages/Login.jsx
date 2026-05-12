@@ -40,22 +40,37 @@ const Login = () => {
     setErrorMsg('');
     
     try {
+      // 1. Authenticate with the User/Auth Service
       const response = await axios.post('http://localhost:8383/tourismgov/v1/auth/login', formData);
 
       if (response.data && response.data.token) {
-        // 1. Save token AND the full user profile (so we know their role later)
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data));
-
-        // 2. Route based on the user's role!
+        const token = response.data.token;
         const userRole = response.data.role;
 
+        // Save Auth details
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(response.data));
+
+        // 2. Role-Based Routing
         if (userRole === 'ADMIN' || userRole === 'OFFICER') {
-          // Send government staff to the admin dashboard
           navigate('/admin');
-        } else {
-          // Send standard citizens to the tourist dashboard
+          return;
+        } 
+        
+        // 3. For Tourists: Check if they have a profile in the Tourist Service
+        try {
+          // We ping the profile endpoint using their fresh token
+          await axios.get('http://localhost:8383/tourismgov/v1/tourist/profile', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          // If the above request succeeds (200 OK), the profile exists!
           navigate('/dashboard');
+
+        } catch (profileError) {
+          // If it throws an error (like 404 Not Found), they haven't made a profile yet.
+          console.log("No profile found, redirecting to setup.");
+          navigate('/complete-profile');
         }
       }
 
