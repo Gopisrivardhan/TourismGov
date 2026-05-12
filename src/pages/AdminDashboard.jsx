@@ -5,7 +5,6 @@ import axios from 'axios';
 const AdminDashboard = () => {
     const navigate = useNavigate();
     
-    // States for real data
     const [adminUser, setAdminUser] = useState({ name: 'Loading...', role: 'ADMIN' });
     const [loadingStats, setLoadingStats] = useState(true);
     const [stats, setStats] = useState({
