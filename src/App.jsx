@@ -10,6 +10,7 @@ import TouristEvents from './pages/TouristEvents';
 import AdminPrograms from './pages/AdminPrograms';
 import TouristPrograms from './pages/TouristPrograms';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminHeritageSites from './pages/AdminSite';
 function App() {
   return (
     <Router>
@@ -21,6 +22,7 @@ function App() {
         <Route path="/events" element={<TouristEvents />} />
         <Route path="/programs" element={<TouristPrograms />} />
         <Route path="/admin/programs" element={<AdminPrograms />} />
+        <Route path="/admin/sites" element={<AdminHeritageSites />} />
         <Route path="/dashboard" element={<TouristDashboard />} />
         <Route path="/GovernanceDashboard" element={<GovernanceDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />
