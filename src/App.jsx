@@ -10,6 +10,7 @@ import TouristEvents from './pages/TouristEvents';
 import AdminPrograms from './pages/AdminPrograms';
 import TouristPrograms from './pages/TouristPrograms';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminHeritageSites from './pages/AdminSite';
 import MainDashboard from './pages/MainDashboard';
 import ReportsPage from './pages/ReportsPage';
 import NotificationsPage from './pages/NotificationsPage';
@@ -27,6 +28,7 @@ function App() {
         <Route path="/events" element={<TouristEvents />} />
         <Route path="/programs" element={<TouristPrograms />} />
         <Route path="/admin/programs" element={<AdminPrograms />} />
+        <Route path="/admin/sites" element={<AdminHeritageSites />} />
         <Route path="/dashboard" element={<TouristDashboard />} />
         <Route path="/GovernanceDashboard" element={<GovernanceDashboard />} />
         <Route path="/admin" element={<AdminDashboard />} />

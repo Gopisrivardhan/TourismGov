@@ -22,14 +22,13 @@ const AdminPrograms = () => {
     const [showResourceForm, setShowResourceForm] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false); 
 
-    // Forms
-    const initialFormState = { title: '', description: '', startDate: '', endDate: '', budget: '' };
+    // Forms (Added 'id' to track editing context safely)
+    const initialFormState = { id: null, title: '', description: '', startDate: '', endDate: '', budget: '' };
     const [formData, setFormData] = useState(initialFormState);
     const [resourceForm, setResourceForm] = useState({ type: 'FUNDS', quantity: '' });
 
     const BASE_URL = 'http://localhost:8383/tourismgov/v1';
 
-    // 1. BULLETPROOF TOKEN CONFIGURATION
     const getAxiosConfig = useCallback(() => {
         const token = localStorage.getItem('token') || JSON.parse(localStorage.getItem('user'))?.token;
         return { 
@@ -39,6 +38,17 @@ const AdminPrograms = () => {
             } 
         };
     }, []);
+
+    // --- UI Warning/Success Handlers ---
+    const showWarning = (msg) => {
+        setError(msg);
+        setTimeout(() => setError(null), 5000); // Auto-hide warning after 5s
+    };
+
+    const showSuccess = (msg) => {
+        setSuccessMsg(msg);
+        setTimeout(() => setSuccessMsg(''), 4000);
+    };
 
     // --- SECURITY CHECK & DATA FETCHING ---
     useEffect(() => {
@@ -55,7 +65,6 @@ const AdminPrograms = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [navigate]);
 
-    // --- API: Fetch All Programs ---
     const fetchPrograms = async () => {
         setLoading(true);
         try {
@@ -63,13 +72,12 @@ const AdminPrograms = () => {
             setPrograms(res.data);
             setError(null);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to fetch programs.');
+            showWarning(err.response?.data?.message || 'Failed to fetch programs.');
         } finally {
             setLoading(false);
         }
     };
 
-    // --- API: Fetch Single Program, Budget, AND Resources ---
     const handleSelectProgram = async (programId) => {
         try {
             const [progRes, budgetRes, resourceRes] = await Promise.all([
@@ -85,7 +93,6 @@ const AdminPrograms = () => {
             setError(null);
             setSuccessMsg('');
             
-            // On mobile, scroll down to the details view when a program is selected
             if (window.innerWidth < 1024) {
                 setTimeout(() => {
                     document.getElementById('details-panel')?.scrollIntoView({ behavior: 'smooth' });
@@ -94,27 +101,35 @@ const AdminPrograms = () => {
         } catch (err) {
             setIsFormOpen(false); 
             setSelectedProgram(null);
-            setError(`Data Fetch Error: ${err.response?.data?.message || err.message}`);
+            showWarning(`Data Fetch Error: ${err.response?.data?.message || err.message}`);
         }
     };
 
     // --- API: Create or Update Program ---
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
         if (isSubmitting) return; 
 
         setError(null);
         setSuccessMsg('');
         setIsSubmitting(true); 
 
+        // Enforce numeric payload for backend validation
+        const payload = {
+            title: formData.title,
+            description: formData.description,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+            budget: Number(formData.budget) 
+        };
+
         try {
-            if (isEditing) {
-                await axios.put(`${BASE_URL}/programs/${selectedProgram.programId}`, formData, getAxiosConfig());
-                setSuccessMsg('Program updated successfully!');
+            if (isEditing && formData.id) {
+                await axios.put(`${BASE_URL}/programs/${formData.id}`, payload, getAxiosConfig());
+                showSuccess('Program updated successfully!');
             } else {
-                await axios.post(`${BASE_URL}/programs`, formData, getAxiosConfig());
-                setSuccessMsg('Tourism program created successfully!'); 
+                await axios.post(`${BASE_URL}/programs`, payload, getAxiosConfig());
+                showSuccess('Tourism program created successfully!'); 
             }
             
             setFormData(initialFormState);
@@ -122,10 +137,13 @@ const AdminPrograms = () => {
             setIsEditing(false);
             await fetchPrograms(); 
             
-            setTimeout(() => setSuccessMsg(''), 4000);
+            // Re-fetch selected program details if we just edited the one currently open
+            if (isEditing && formData.id === selectedProgram?.programId) {
+                handleSelectProgram(formData.id);
+            }
             
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to save program. Check dates and duplicates.');
+            showWarning(err.response?.data?.message || 'Failed to save program. Check dates and duplicates.');
         } finally {
             setIsSubmitting(false); 
         }
@@ -136,36 +154,41 @@ const AdminPrograms = () => {
             await axios.patch(`${BASE_URL}/programs/${programId}/status?status=${newStatus}`, null, getAxiosConfig());
             fetchPrograms();
             if (selectedProgram?.programId === programId) handleSelectProgram(programId);
+            showSuccess(`Status updated to ${newStatus}`);
         } catch (err) {
-            alert(err.response?.data?.message || "Cannot change status.");
+            showWarning(err.response?.data?.message || "Cannot change status.");
         }
     };
 
     const handleDelete = async (programId) => {
-        if (!window.confirm('Are you sure you want to cancel and delete this program?')) return;
+        if (!window.confirm('Are you sure you want to completely delete this program? This action cannot be undone.')) return;
         try {
             await axios.delete(`${BASE_URL}/programs/${programId}`, getAxiosConfig());
             setSelectedProgram(null);
             fetchPrograms();
-            setSuccessMsg('Program deleted successfully.');
-            setTimeout(() => setSuccessMsg(''), 4000);
+            showSuccess('Program deleted successfully.');
         } catch (err) {
-            alert('Failed to delete program.');
+            showWarning(err.response?.data?.message || 'Failed to delete program.');
         }
     };
 
     // --- API: Resource Management ---
     const handleAllocateResource = async (e) => {
         e.preventDefault();
+        
+        const payload = {
+            ...resourceForm,
+            quantity: Number(resourceForm.quantity)
+        };
+
         try {
-            await axios.post(`${BASE_URL}/programs/${selectedProgram.programId}/resources`, resourceForm, getAxiosConfig());
+            await axios.post(`${BASE_URL}/programs/${selectedProgram.programId}/resources`, payload, getAxiosConfig());
             setResourceForm({ type: 'FUNDS', quantity: '' });
             setShowResourceForm(false);
             handleSelectProgram(selectedProgram.programId); 
-            setSuccessMsg('Resource allocated successfully.');
-            setTimeout(() => setSuccessMsg(''), 3000);
+            showSuccess('Resource allocated successfully.');
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to allocate resource.');
+            showWarning(err.response?.data?.message || 'Failed to allocate resource.');
         }
     };
 
@@ -173,8 +196,9 @@ const AdminPrograms = () => {
         try {
             await axios.patch(`${BASE_URL}/resources/${resourceId}/status?status=${newStatus}`, null, getAxiosConfig());
             handleSelectProgram(selectedProgram.programId);
+            showSuccess('Resource status updated.');
         } catch (err) {
-            alert('Failed to update resource status.');
+            showWarning(err.response?.data?.message || 'Failed to update resource status.');
         }
     };
 
@@ -182,8 +206,9 @@ const AdminPrograms = () => {
         try {
             await axios.delete(`${BASE_URL}/resources/${resourceId}`, getAxiosConfig());
             handleSelectProgram(selectedProgram.programId);
+            showSuccess('Resource removed.');
         } catch (err) {
-            alert('Failed to delete resource.');
+            showWarning(err.response?.data?.message || 'Failed to delete resource.');
         }
     };
     
@@ -208,8 +233,12 @@ const AdminPrograms = () => {
 
     const openEditForm = (program) => {
         setFormData({
-            title: program.title, description: program.description,
-            startDate: program.startDate, endDate: program.endDate, budget: program.budget
+            id: program.programId,
+            title: program.title, 
+            description: program.description,
+            startDate: program.startDate, 
+            endDate: program.endDate, 
+            budget: program.budget
         });
         setIsEditing(true);
         setIsFormOpen(true);
@@ -225,7 +254,7 @@ const AdminPrograms = () => {
     return (
         <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] font-sans selection:bg-[#FF6D00] selection:text-white flex flex-col">
             
-            {/* RESPONSIVE TOP NAVIGATION */}
+            {/* TOP NAVIGATION */}
             <div className="bg-[#1A237E] p-4 px-4 md:px-10 flex justify-between items-center text-white shadow-lg sticky top-0 z-50">
                 <div className="flex items-center gap-3 md:gap-4 flex-1">
                     <Link to="/admin" className="hover:text-[#FF6D00] transition-colors text-xl md:text-2xl font-bold" title="Back to Dashboard">
@@ -253,7 +282,7 @@ const AdminPrograms = () => {
 
             <main className="flex-1 max-w-screen-2xl w-full mx-auto p-4 md:p-6 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
                 
-                {/* LEFT PANEL: PROGRAM LIST */}
+                {/* LEFT PANEL */}
                 <div className="lg:col-span-4 flex flex-col gap-4 md:gap-6">
                     <div className="flex justify-between items-end mb-2 lg:mb-0">
                         <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-none">Programs</h2>
@@ -265,7 +294,6 @@ const AdminPrograms = () => {
                         </button>
                     </div>
 
-                    {/* EMPTY STATE */}
                     {!loading && programs.length === 0 && (
                         <div className="bg-white p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-2 border-dashed border-[#1A237E]/20 text-center flex flex-col items-center justify-center py-12 md:py-16 shadow-sm">
                             <span className="text-2xl mb-4">📋</span>
@@ -277,7 +305,6 @@ const AdminPrograms = () => {
                         </div>
                     )}
 
-                    {/* LIST OF PROGRAMS */}
                     <div className="flex flex-col gap-3 md:gap-4 max-h-auto lg:max-h-[75vh] overflow-y-auto pr-1 lg:pr-2">
                         {programs.map(prog => (
                             <div 
@@ -301,23 +328,24 @@ const AdminPrograms = () => {
                     </div>
                 </div>
 
-                {/* RIGHT PANEL: DETAILS & FORMS */}
+                {/* RIGHT PANEL */}
                 <div id="details-panel" className="lg:col-span-8 scroll-mt-24">
                     
+                    {/* UI ALERTS */}
                     {successMsg && (
-                        <div className="mb-4 md:mb-6 p-4 bg-green-50 border border-green-200 rounded-[1rem] flex items-center justify-between">
+                        <div className="mb-4 md:mb-6 p-4 bg-green-50 border border-green-200 rounded-[1rem] flex items-center justify-between shadow-sm animate-fade-in-up">
                             <p className="text-green-700 font-bold text-[9px] md:text-[10px] uppercase tracking-widest">✅ {successMsg}</p>
                             <button onClick={() => setSuccessMsg('')} className="text-green-700 hover:text-green-900">&times;</button>
                         </div>
                     )}
 
                     {error && (
-                        <div className="mb-4 md:mb-6 p-4 bg-[#D81B60]/10 border border-[#D81B60]/20 rounded-[1rem]">
-                            <p className="text-[#D81B60] font-bold text-[9px] md:text-[10px] uppercase tracking-widest">Error: {error}</p>
+                        <div className="mb-4 md:mb-6 p-4 bg-[#D81B60]/10 border border-[#D81B60]/20 rounded-[1rem] flex items-center justify-between shadow-sm animate-fade-in-up">
+                            <p className="text-[#D81B60] font-bold text-[9px] md:text-[10px] uppercase tracking-widest">⚠️ Warning: {error}</p>
+                            <button onClick={() => setError(null)} className="text-[#D81B60] hover:text-red-900">&times;</button>
                         </div>
                     )}
 
-                    {/* CREATE / EDIT FORM */}
                     {isFormOpen ? (
                         <div className="bg-white p-6 md:p-8 lg:p-10 rounded-[1.5rem] md:rounded-[2rem] shadow-2xl border border-[#1A237E]/10 animate-fade-in-up">
                             <h2 className="text-2xl md:text-3xl font-black uppercase leading-none text-[#1A237E] mb-6 md:mb-8">
@@ -371,9 +399,7 @@ const AdminPrograms = () => {
                         </div>
                     ) : selectedProgram ? (
                         
-                        /* DETAILS DASHBOARD */
                         <div className="bg-white p-6 md:p-8 lg:p-10 rounded-[1.5rem] md:rounded-[2rem] shadow-2xl border border-[#1A237E]/10 animate-fade-in-up">
-                            
                             {/* Header Panel */}
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-[#1A237E]/10 pb-6 md:pb-8 mb-6 md:mb-8 gap-4">
                                 <div className="w-full md:w-auto">
