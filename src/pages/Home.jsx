@@ -1,28 +1,40 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar'; // Adjust path based on your folder structure
-import Footer from '../components/Footer'; // Adjust path based on your folder structure
+import Navbar from '../components/Navbar'; 
+import Footer from '../components/Footer'; 
 
 const Home = () => {
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    // LOGIC: Check if user is logged in to update the Navbar UI
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        setIsLoggedIn(!!token);
+    }, []);
+
     return (
         <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] selection:bg-[#FF6D00] selection:text-white">
 
-            {/* NAVIGATION COMPONENT */}
-            <Navbar />
+            {/* UPDATED: Passing isLoggedIn to Navbar so it shows Dashboard/Reports/Bell */}
+            <Navbar isLoggedIn={isLoggedIn} />
 
-            {/* HEADER WITH VIDEO - Fixed Alignment & Sizing */}
+            {/* HEADER WITH VIDEO */}
             <header className="p-3 md:p-6 h-[85vh] min-h-[500px] max-h-[700px]">
-                <div className="relative w-full h-full rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl">
+                <div className="relative w-full h-full rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl bg-slate-900">
                     <video
                         autoPlay
                         loop
                         muted
                         playsInline
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover opacity-60"
                     >
-                        <source src="https://youtu.be/35npVaFGHMY?si=CL_MDgB2d2sWrH1v" type="video/mp4" />
+                        {/* NOTE: Replaced YouTube link with a direct MP4 link. 
+                            YouTube links only work in <iframe>, not <video> tags. */}
+                        <source src="https://assets.mixkit.co/videos/preview/mixkit-taj-mahal-in-india-4067-large.mp4" type="video/mp4" />
                     </video>
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1A237E]/90 via-[#1A237E]/40 to-transparent"></div>
+                    
+                    {/* Gradient Overlay for Text Readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#1A237E]/95 via-[#1A237E]/40 to-transparent"></div>
 
                     <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-12 lg:px-20 pt-24">
                         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black uppercase leading-[0.95] tracking-tighter text-white mb-4">
@@ -37,7 +49,7 @@ const Home = () => {
                             <input
                                 type="text"
                                 placeholder="Search forts, festivals, states..."
-                                className="flex-1 px-5 py-3 sm:px-6 sm:py-3 bg-white/20 sm:bg-transparent rounded-full sm:rounded-none border-none focus:outline-none text-sm md:text-base text-white placeholder-white/70 font-medium"
+                                className="flex-1 px-5 py-3 sm:px-6 sm:py-3 bg-transparent border-none focus:outline-none text-sm md:text-base text-white placeholder-white/70 font-medium"
                             />
                             <button className="w-full sm:w-auto bg-white text-[#1A237E] px-6 py-3 rounded-full font-black text-xs uppercase tracking-widest hover:bg-[#FF6D00] hover:text-white transition-colors">
                                 Explore
@@ -49,8 +61,8 @@ const Home = () => {
 
             {/* MAIN DESTINATIONS GRID */}
             <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-16 lg:py-20">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
-                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter text-[#1A237E] leading-none">Featured<br />Destinations</h2>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4 text-[#1A237E]">
+                    <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter leading-none">Featured<br />Destinations</h2>
                     <a href="#" className="inline-flex items-center gap-2 font-bold text-xs uppercase tracking-widest hover:text-[#FF6D00] transition-colors">
                         Explore Map <span className="text-lg md:text-xl">&rarr;</span>
                     </a>
@@ -91,11 +103,10 @@ const Home = () => {
                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-[#880E4F]/95 via-[#880E4F]/40 to-transparent"></div>
-                            <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-[#FF6D00]/40 rounded-full blur-3xl z-0"></div>
-                            <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-center text-white z-10">
+                            <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-center text-white">
                                 <span className="text-[10px] font-bold uppercase tracking-widest opacity-90 mb-1">Upcoming Event</span>
                                 <h3 className="text-2xl font-black uppercase leading-tight mb-4">Pushkar<br />Camel Fair</h3>
-                                <button className="self-start bg-white text-[#D81B60] font-black uppercase tracking-widest text-[9px] px-5 py-2.5 rounded-full hover:bg-[#1A237E] hover:text-white transition-all duration-300 shadow-lg">
+                                <button className="self-start bg-white text-[#D81B60] font-black uppercase tracking-widest text-[9px] px-5 py-2.5 rounded-full hover:bg-[#1A237E] hover:text-white transition-all shadow-lg">
                                     Book Now
                                 </button>
                             </div>
@@ -118,7 +129,6 @@ const Home = () => {
                 </div>
             </main>
 
-            {/* FOOTER COMPONENT */}
             <Footer />
             
         </div>
