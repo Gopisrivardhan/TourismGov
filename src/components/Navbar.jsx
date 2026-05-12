@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Bell, User, LogOut, Info } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getUser } from '../utils/auth';
+import { Bell, FileText } from 'lucide-react';
 
 const Navbar = ({ unreadNotifications = 0, latestNotification = null, userName = "User", userRole = "Tourist" }) => {
     const navigate = useNavigate();
@@ -8,6 +11,7 @@ const Navbar = ({ unreadNotifications = 0, latestNotification = null, userName =
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [role, setRole] = useState("");
     const [showLatest, setShowLatest] = useState(false);
+    const user = getUser();
 
     // --- Identity Sync: Matches DashboardServiceImpl logic ---
     useEffect(() => {
@@ -146,6 +150,25 @@ const Navbar = ({ unreadNotifications = 0, latestNotification = null, userName =
                                     <User size={16} />
                                 </div>
                             </div>
+                            {user && user.role !== 'TOURIST' && (
+                                <Link to="/reports" className="hidden lg:flex items-center gap-2 px-3 py-2 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors font-bold text-xs uppercase">
+                                    <FileText className="w-4 h-4" /> Reports
+                                </Link>
+                            )}
+
+                            <Link to="/notifications" className="relative p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all">
+                                <Bell className="w-5 h-5" />
+                            </Link>
+
+                            <Link to={user?.role === 'TOURIST' ? "/dashboard" : "/main-dashboard"} className="hidden sm:flex items-center gap-2 bg-[#F8F9FF] px-4 py-2 rounded-full border border-[#1A237E]/10 hover:border-[#FF6D00] transition-all">
+                                <div className="text-right">
+                                    <p className="text-[10px] font-black uppercase text-[#1A237E]">Dashboard</p>
+                                    <p className="text-[9px] font-bold text-[#FF6D00] uppercase tracking-widest">{user?.name || 'Profile'}</p>
+                                </div>
+                                <div className="w-8 h-8 bg-[#1A237E] rounded-full text-white flex items-center justify-center font-bold text-xs">
+                                    {user?.name ? user.name.charAt(0) : 'U'}
+                                </div>
+                            </Link>
                             
                             <button onClick={handleLogout} className="text-slate-400 hover:text-red-500 transition-colors p-2">
                                 <LogOut size={20} />

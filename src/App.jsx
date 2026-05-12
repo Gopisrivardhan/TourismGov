@@ -11,6 +11,19 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard'; 
 import ReportPage from './pages/ReportPage';
 import NotificationsPage from './pages/NotificationsPage'; // NEW: Module 8
+import TouristDashboard from './pages/TouristDashboard';
+import GovernanceDashboard from './pages/GovernanceDashboard';
+import AdminEvents from './pages/AdminEvents';
+import TouristEvents from './pages/TouristEvents';
+import AdminPrograms from './pages/AdminPrograms';
+import TouristPrograms from './pages/TouristPrograms';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminHeritageSites from './pages/AdminSite';
+import MainDashboard from './pages/MainDashboard';
+import ReportsPage from './pages/ReportsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './components/DashboardLayout';
 
 function App() {
   // --- SYNC STATE WITH LOCALSTORAGE ---
@@ -95,6 +108,24 @@ function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/admin/events" element={<AdminEvents />} />
+        <Route path="/events" element={<TouristEvents />} />
+        <Route path="/programs" element={<TouristPrograms />} />
+        <Route path="/admin/programs" element={<AdminPrograms />} />
+        <Route path="/admin/sites" element={<AdminHeritageSites />} />
+        <Route path="/dashboard" element={<TouristDashboard />} />
+        <Route path="/GovernanceDashboard" element={<GovernanceDashboard />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        
+        {/* NEW UNIFIED ROUTES */}
+        <Route path="/main-dashboard" element={<ProtectedRoute><DashboardLayout><MainDashboard /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><DashboardLayout><ReportsPage /></DashboardLayout></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><DashboardLayout><NotificationsPage /></DashboardLayout></ProtectedRoute>} />
+      </Routes>
     </Router>
   );
 }

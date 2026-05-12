@@ -22,6 +22,15 @@ const FormInput = ({ label, type = "text", name, value, onChange, placeholder, c
       {/* This is where the toggle button will be injected */}
       {children}
     </div>
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className="w-full px-6 py-4 text-sm bg-[#F8F9FF] border-2 border-transparent rounded-full focus:border-[#FF6D00] focus:bg-white outline-none transition-all font-medium text-[#1A237E] placeholder-[#1A237E]/30"
+      required
+    />
   </div>
 );
 
@@ -31,14 +40,16 @@ const Login = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [showPassword, setShowPassword] = useState(false); // State to toggle visibility
   
+
   const [formData, setFormData] = useState({
-    email: '', 
+    email: '',
     password: ''
   });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     if (errorMsg) setErrorMsg(''); 
+    if (errorMsg) setErrorMsg('');
   };
 
   const handleSubmit = async (e) => {
@@ -61,6 +72,17 @@ const Login = () => {
       }
     } catch (error) {
       setErrorMsg(error.response?.data?.message || "Invalid credentials. Please verify your email and password.");
+      if (response.data && response.data.token) {
+        // 1. Save token AND the full user profile (so we know their role later)
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data));
+
+        // 2. Route EVERYONE to the unified smart dashboard
+        navigate('/main-dashboard');
+      }
+
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || "Invalid credentials. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -96,16 +118,17 @@ const Login = () => {
             <div className="mb-10">
               <h2 className="text-4xl font-black uppercase tracking-tighter text-[#1A237E]">Sign In</h2>
               <p className="text-[#1A237E]/60 font-bold text-xs uppercase tracking-widest mt-2">Access your government portal</p>
+              <p className="text-[#1A237E]/60 font-bold text-xs uppercase tracking-widest mt-2">Access your account</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-2">
-              <FormInput 
-                label="Email Address" 
-                type="email" 
-                name="email" 
-                value={formData.email} 
-                onChange={handleChange} 
-                placeholder="name@example.com" 
+              <FormInput
+                label="Email Address"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="name@example.com"
               />
               
               <FormInput 
@@ -128,6 +151,18 @@ const Login = () => {
 
               <div className="flex justify-end pr-4 -mt-2 mb-4">
                   <a href="#" className="text-[9px] font-black uppercase text-[#FF6D00] hover:underline tracking-widest">Forgot Password?</a>
+              <div className="relative mb-2">
+                <FormInput
+                    label="Password"
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                />
+                <div className="absolute top-0 right-4">
+                    <a href="#" className="text-[9px] font-black uppercase text-[#FF6D00] hover:underline tracking-widest">Forgot Password?</a>
+                </div>
               </div>
 
               {errorMsg && (
@@ -136,8 +171,8 @@ const Login = () => {
                 </div>
               )}
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="w-full bg-[#1A237E] text-white font-black uppercase tracking-[0.2em] py-4 text-sm rounded-full hover:bg-[#FF6D00] shadow-xl transition-all duration-300 hover:-translate-y-1 mt-4 disabled:opacity-50 disabled:hover:translate-y-0"
               >
@@ -149,6 +184,8 @@ const Login = () => {
               <p className="text-xs font-bold text-[#1A237E]/50 uppercase tracking-widest">
                 New to the portal? 
                 <Link to="/register" className="ml-2 text-[#FF6D00] hover:text-[#1A237E] transition-colors hover:underline">Register Account</Link>
+                Don't have an account?
+                <Link to="/register" className="ml-2 text-[#FF6D00] hover:text-[#1A237E] transition-colors hover:underline">Create One</Link>
               </p>
             </div>
           </div>
