@@ -83,4 +83,46 @@ export const reportApi = {
     })
 };
 
+/**
+ * ─── COMPLIANCE API ───────────────────────────────────────────────────────
+ * Maps to ComplianceController.java
+ */
+export const ComplianceAPI = {
+    getAll: async () => {
+        const response = await api.get('/tourismgov/v1/compliance/records?size=100&sort=createdAt,desc');
+        return response.data;
+    },
+    create: async (data) => {
+        const response = await api.post('/tourismgov/v1/compliance/records', data);
+        return response.data;
+    },
+    updateResult: async (recordId, result) => {
+        const response = await api.patch(`/tourismgov/v1/compliance/records/${recordId}/result?result=${result}`);
+        return response.data;
+    },
+    delete: async (recordId) => {
+        const response = await api.delete(`/tourismgov/v1/compliance/records/${recordId}`);
+        return response.data;
+    }
+};
+
+/**
+ * ─── AUDIT API ────────────────────────────────────────────────────────────
+ * Maps to AuditController.java
+ */
+export const AuditAPI = {
+    getAll: async () => {
+        const response = await api.get('/tourismgov/v1/audits/official');
+        return response.data;
+    },
+    create: async (data) => {
+        const response = await api.post('/tourismgov/v1/audits/official', data);
+        return response.data;
+    },
+    update: async (auditId, data) => {
+        const response = await api.patch(`/tourismgov/v1/audits/official/${auditId}`, data);
+        return response.data;
+    }
+};
+
 export default api;

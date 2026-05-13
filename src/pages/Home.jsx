@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar'; 
 import Footer from '../components/Footer'; 
-import { notificationApi } from '../services/api'; // Integrated for Module 8
+import { notificationApi } from '../services/api'; 
+
+// Import your local video file
+import backgroundVideo from '../assets/backgroundvideo.mp4';
 
 const Home = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -12,7 +15,6 @@ const Home = () => {
         const userId = localStorage.getItem('userId');
         setIsLoggedIn(!!token);
 
-        // Fetch real notification count if logged in (Module 8)
         if (token && userId) {
             notificationApi.getUnread()
                 .then(res => setUnreadCount(res.data.length))
@@ -23,50 +25,59 @@ const Home = () => {
     return (
         <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] selection:bg-[#FF6D00] selection:text-white font-sans">
 
-            {/* FIXED: Passing unreadNotifications so the Navbar badge actually works */}
+            {/* If your Navbar is set to 'absolute' or 'fixed' in its own file, it will float perfectly over the video */}
             <Navbar isLoggedIn={isLoggedIn} unreadNotifications={unreadCount} />
 
-            {/* HEADER WITH VIDEO */}
-            <header className="p-3 md:p-6 h-[85vh] min-h-[500px] max-h-[700px]">
-                <div className="relative w-full h-full rounded-[2rem] md:rounded-[3rem] overflow-hidden shadow-2xl bg-slate-900">
-                    <video
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        poster="https://images.unsplash.com/photo-1524492412937-b28074a5d7da?auto=format&fit=crop&q=80&w=1200"
-                        className="absolute inset-0 w-full h-full object-cover opacity-60"
-                    >
-                        <source src="https://assets.mixkit.co/videos/preview/mixkit-taj-mahal-in-india-4067-large.mp4" type="video/mp4" />
-                    </video>
-                    
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1A237E]/95 via-[#1A237E]/40 to-transparent"></div>
+            {/* 
+                HERO SECTION - UPDATED FOR FULL EDGE-TO-EDGE PROFESSIONAL LOOK
+                Removed the p-6, rounded borders, and margins. Made it h-screen.
+            */}
+            <header className="relative w-full h-screen min-h-[600px] max-h-[900px] overflow-hidden">
+                
+                {/* Edge-to-Edge Background Video */}
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                >
+                    <source src={backgroundVideo} type="video/mp4" />
+                </video>
+                
+                {/* 
+                    Gradient Overlay: 
+                    - Dark at the top so the white Navbar is visible.
+                    - Clear in the middle to see the video.
+                    - Fades into the exact background color (#FFFDF7) at the bottom for a seamless blend.
+                */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#1A237E]/80 via-[#1A237E]/30 to-[#FFFDF7]"></div>
 
-                    <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-12 lg:px-20 pt-24">
-                        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black uppercase leading-[0.95] tracking-tighter text-white mb-4">
-                            Incredible <br /> <span className="text-[#FF6D00]">India.</span>
-                        </h1>
+                {/* Content Container - Pushed down to clear the floating Navbar */}
+                <div className="relative z-10 flex flex-col justify-center h-full px-6 md:px-12 lg:px-20 pt-24 max-w-screen-2xl mx-auto">
+                    <h1 className="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-black uppercase leading-[0.9] tracking-tighter text-white mb-6 drop-shadow-2xl">
+                        Incredible <br /> <span className="text-[#FF6D00]">India.</span>
+                    </h1>
 
-                        <p className="text-sm sm:text-base md:text-lg font-medium text-white/90 max-w-2xl mb-8">
-                            Experience vibrant heritage, book cultural events, and manage your journey through the official tourism portal.
-                        </p>
+                    <p className="text-sm sm:text-base md:text-lg font-medium text-white/90 max-w-2xl mb-10 drop-shadow-md">
+                        Experience vibrant heritage, book cultural events, and manage your journey through the official tourism portal.
+                    </p>
 
-                        <form className="flex flex-col sm:flex-row w-full max-w-2xl bg-white/10 sm:bg-white/20 backdrop-blur-md rounded-3xl sm:rounded-full p-1.5 border border-white/20 shadow-xl gap-2 sm:gap-0">
-                            <input
-                                type="text"
-                                placeholder="Search forts, festivals, states..."
-                                className="flex-1 px-5 py-3 sm:px-6 sm:py-3 bg-transparent border-none focus:outline-none text-sm md:text-base text-white placeholder-white/70 font-medium"
-                            />
-                            <button className="w-full sm:w-auto bg-white text-[#1A237E] px-8 py-3 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-[#FF6D00] hover:text-white transition-all">
-                                Explore
-                            </button>
-                        </form>
-                    </div>
+                    <form className="flex flex-col sm:flex-row w-full max-w-2xl bg-white/20 backdrop-blur-md rounded-3xl sm:rounded-full p-1.5 border border-white/30 shadow-2xl gap-2 sm:gap-0">
+                        <input
+                            type="text"
+                            placeholder="Search forts, festivals, states..."
+                            className="flex-1 px-5 py-3 sm:px-6 sm:py-4 bg-transparent border-none focus:outline-none text-sm md:text-base text-white placeholder-white/80 font-medium"
+                        />
+                        <button className="w-full sm:w-auto bg-white text-[#1A237E] px-8 py-3 rounded-full font-black text-[10px] md:text-xs uppercase tracking-widest hover:bg-[#FF6D00] hover:text-white transition-all shadow-lg">
+                            Explore
+                        </button>
+                    </form>
                 </div>
             </header>
 
             {/* MAIN DESTINATIONS GRID */}
-            <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-16 lg:py-20">
+            <main className="max-w-screen-2xl mx-auto px-4 md:px-6 py-16 lg:py-24">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-4">
                     <h2 className="text-4xl md:text-5xl lg:text-6xl font-black uppercase tracking-tighter leading-none">Featured<br />Destinations</h2>
                     <a href="#" className="inline-flex items-center gap-2 font-bold text-[10px] uppercase tracking-[0.2em] hover:text-[#FF6D00] transition-colors">
