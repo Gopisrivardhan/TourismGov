@@ -1,133 +1,175 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { 
-  MapPin, Calendar, Users, Wallet, ShieldCheck, 
-  Clock, TrendingUp, Loader2, FileSearch 
+  MapPin, Calendar, Users, ShieldCheck, 
+  Loader2, FileSearch, Layers, CalendarDays, Ticket, Map, Shield // Shield is now correctly imported!
 } from 'lucide-react';
-import { dashboardApi, notificationApi } from '../services/api';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
-  const [latestNotif, setLatestNotif] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // --- FETCH DATA FROM BACKEND ---
+  // --- API DATA FETCHING ---
   useEffect(() => {
-    const fetchDashboard = async () => {
+    const fetchDashboardData = async () => {
       try {
-        // 1. Fetch Aggregated Metrics (DashboardServiceImpl.java)
-        const response = await dashboardApi.getStats();
-        setData(response.data);
+        const token = localStorage.getItem('token');
+        const axiosConfig = { headers: { Authorization: `Bearer ${token}` } };
+        const BASE_URL = 'http://localhost:8383/tourismgov/v1';
 
-        // 2. Fetch Latest Unread Notification for the Navbar Bell dropdown
-        const notifRes = await notificationApi.getUnread();
-        if (notifRes.data && notifRes.data.length > 0) {
-          setLatestNotif(notifRes.data[0]); // Take the most recent one
-        }
+        // 1. Fetch data concurrently
+        // Notice we changed /bookings to /bookings/paged because /bookings doesn't exist in your Controller!
+        const [sitesRes, programsRes, eventsRes, usersRes, bookingsPagedRes] = await Promise.all([
+            axios.get(`${BASE_URL}/sites`, axiosConfig).catch(() => ({ data: [] })),
+            axios.get(`${BASE_URL}/programs`, axiosConfig).catch(() => ({ data: [] })),
+            axios.get(`${BASE_URL}/events`, axiosConfig).catch(() => ({ data: [] })),
+            axios.get(`${BASE_URL}/users`, axiosConfig).catch(() => ({ data: [] })),
+            axios.get(`${BASE_URL}/bookings/paged?size=1`, axiosConfig).catch(() => ({ data: { totalElements: 0 } }))
+        ]);
+
+        // 2. Safely calculate the counts
+        const totalSites = sitesRes.data?.length || 0;
+        const totalEvents = eventsRes.data?.length || 0;
+        const totalUsers = usersRes.data?.length || 0;
+        
+        const activeProgs = programsRes.data?.filter 
+            ? programsRes.data.filter(p => p.status === 'ACTIVE' || p.status === 'PLANNED').length 
+            : 0;
+
+        // Extract total elements from Spring Boot's Pageable response
+        const totalBookings = bookingsPagedRes.data?.totalElements || 0;
+
+        // 3. Set the data so the dashboard renders properly
+        setData({
+            role: localStorage.getItem('role') || 'TOURIST',
+            userName: localStorage.getItem('name') || 'User',
+            metrics: {
+                heritageSites: totalSites,
+                activePrograms: activeProgs,
+                upcomingEvents: totalEvents,
+                totalUsers: totalUsers,
+                pendingAudits: 0, // Update this if you have a specific Audit API later
+                totalBookings: totalBookings
+            }
+        });
+
       } catch (err) {
-        console.error("Dashboard Synchronization Error:", err);
+        console.error("Dashboard Sync Error:", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchDashboard();
+    
+    fetchDashboardData();
   }, []);
 
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#FFFDF7]">
       <Loader2 size={48} className="text-[#FF6D00] animate-spin mb-4" />
-      <p className="font-black uppercase text-xs tracking-widest text-[#1A237E]">Synchronizing Role-Based Intelligence...</p>
+      <p className="font-black uppercase text-xs tracking-widest text-[#1A237E]">Synchronizing Intelligence...</p>
     </div>
   );
 
+  const userRole = data?.role || 'TOURIST';
+  const userName = data?.userName || 'User';
+  const metrics = data?.metrics || {};
+
+  // --- KPI CARDS CONFIGURATION ---
+  const kpiCards = [
+    { label: "Heritage Sites", value: metrics.heritageSites || 0, icon: <MapPin size={26} />, color: "bg-[#1A237E] shadow-indigo-500/20" },
+    { label: "Active Programs", value: metrics.activePrograms || 0, icon: <Layers size={26} />, color: "bg-emerald-600 shadow-emerald-500/20" },
+    { label: "Upcoming Events", value: metrics.upcomingEvents || 0, icon: <Calendar size={26} />, color: "bg-[#FF6D00] shadow-orange-500/20" },
+    { label: "Pending Audits", value: metrics.pendingAudits || 0, icon: <ShieldCheck size={26} />, color: "bg-rose-600 shadow-rose-500/20" },
+    { label: "Registered Users", value: metrics.totalUsers || 0, icon: <Users size={26} />, color: "bg-blue-500 shadow-blue-500/20" },
+    { label: "Total Bookings", value: metrics.totalBookings || 0, icon: <Ticket size={26} />, color: "bg-teal-500 shadow-teal-500/20" }
+  ];
+
   return (
-    <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] font-sans flex flex-col">
-      {/* Pass real-time data to your glassy Navbar 
-        unreadNotifications comes from DashboardDTO
-      */}
-      <Navbar 
-        unreadNotifications={data?.unreadNotifications || 0} 
-        latestNotification={latestNotif} 
-      />
-      
-      <main className="flex-1 max-w-7xl mx-auto w-full px-6 pt-32 pb-20">
+    <div className="min-h-screen bg-[#FFFDF7] text-[#1A237E] font-sans flex flex-col pt-32 pb-20">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-6">
         
-        {/* --- DYNAMIC HEADER --- */}
+        {/* HEADER */}
         <header className="mb-12">
           <div className="flex items-center gap-2 mb-3">
-            <span className="bg-[#FF6D00] text-white text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-widest">
+            <span className="bg-[#FF6D00] text-white text-[8px] font-black px-3 py-1.5 rounded-md uppercase tracking-widest">
               Live System Status
             </span>
             <span className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
-              {data?.role} CLEARANCE LEVEL
+              {userRole} CLEARANCE LEVEL
             </span>
           </div>
           <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">
             Operational <br /><span className="text-[#FF6D00]">Intelligence.</span>
           </h1>
-          <p className="mt-4 font-bold opacity-60 text-lg">System initialized for {data?.userName}.</p>
+          <p className="mt-4 font-bold opacity-60 text-lg">
+            System initialized for {userName}.
+          </p>
         </header>
 
-        {/* --- METRICS GRID --- 
-            Directly iterates over the LinkedHashMap from DashboardServiceImpl
-        */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {data?.metrics && Object.entries(data.metrics).map(([key, value]) => (
-            <StatCard 
-              key={key}
-              label={key.replace(/([A-Z])/g, ' $1').trim()} 
-              value={value} 
-              icon={getIconForMetric(key)} 
-              color={getColorForMetric(key, data.role)} 
-            />
+        {/* METRICS GRID */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          {kpiCards.map((kpi, index) => (
+            <StatCard key={index} label={kpi.label} value={kpi.value} icon={kpi.icon} color={kpi.color} />
           ))}
         </div>
 
-        {/* Strategic Actions section removed to keep dashboard clean as requested */}
-      </main>
+        {/* ADMINISTRATIVE MODULES (HIDDEN FROM TOURISTS) */}
+        {userRole !== 'TOURIST' && (
+          <div className="mt-16 border-t border-[#1A237E]/10 pt-16 animate-fade-in-up">
+            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-[#1A237E]">
+                    Administrative Modules
+                    </h2>
+                    <p className="font-bold text-xs uppercase tracking-widest text-[#1A237E]/50 mt-2">
+                        System Management & Oversight Console
+                    </p>
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+              <ActionCard to="/programs" icon={<Layers size={24} />} title="Programs" desc="Manage national tourism campaigns and budgets." color="bg-[#1A237E]" />
+              <ActionCard to="/events" icon={<CalendarDays size={24} />} title="Events" desc="Schedule festivals and oversee tourist bookings." color="bg-[#FF6D00]" />
+              <ActionCard to="/sites" icon={<Map size={24} />} title="Sites" desc="Register monuments and track preservation logs." color="bg-cyan-600" />
+              <ActionCard to="/compliance" icon={<Shield size={24} />} title="Governance" desc="Conduct official audits and compliance records." color="bg-rose-600" />
+              <ActionCard to="/reports" icon={<FileSearch size={24} />} title="Reports" desc="Generate and download secure intelligence briefs." color="bg-emerald-600" />
+            </div>
+          </div>
+        )}
 
-      <Footer />
+      </main>
     </div>
   );
 };
 
-// --- LOGIC HELPERS ---
-
-const getIconForMetric = (key) => {
-  const k = key.toLowerCase();
-  if (k.includes('site')) return <MapPin />;
-  if (k.includes('event')) return <Calendar />;
-  if (k.includes('budget')) return <Wallet />;
-  if (k.includes('user')) return <Users />;
-  if (k.includes('compliance') || k.includes('violation')) return <ShieldCheck />;
-  if (k.includes('audit')) return <FileSearch />;
-  if (k.includes('pending') || k.includes('upcoming')) return <Clock />;
-  return <TrendingUp />;
-};
-
-const getColorForMetric = (key, role) => {
-  const k = key.toLowerCase();
-  if (k.includes('violation') || k.includes('fail')) return 'bg-rose-600 shadow-rose-500/20';
-  if (k.includes('budget')) return 'bg-emerald-600 shadow-emerald-500/20';
-  if (role === 'ADMIN' || role === 'MANAGER') return 'bg-[#1A237E] shadow-indigo-500/20';
-  return 'bg-[#FF6D00] shadow-orange-500/20';
-};
-
+// --- COMPONENTS ---
 const StatCard = ({ label, value, icon, color }) => (
-  <motion.div 
-    whileHover={{ y: -8, scale: 1.02 }}
-    className="bg-white p-8 rounded-[3rem] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white flex items-center gap-8"
-  >
-    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-2xl ${color}`}>
-      {React.cloneElement(icon, { size: 28 })}
+  <motion.div whileHover={{ y: -5 }} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-xl border border-slate-100 flex items-center gap-6 transition-shadow hover:shadow-2xl">
+    <div className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center text-white shadow-xl ${color}`}>
+      {icon}
     </div>
     <div>
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-      <span className="text-3xl font-black text-[#1A237E] tracking-tighter leading-none">{value}</span>
+      <p className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+      <span className="text-3xl md:text-4xl font-black text-[#1A237E] tracking-tighter leading-none block">{value.toLocaleString()}</span>
     </div>
   </motion.div>
+);
+
+const ActionCard = ({ to, icon, title, desc, color }) => (
+  <Link to={to} className="block group h-full">
+    <motion.div whileHover={{ y: -5 }} className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-100 h-full flex flex-col transition-all hover:border-[#1A237E]/20 hover:shadow-2xl">
+      <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-white shadow-lg mb-6 transition-transform group-hover:scale-110 ${color}`}>
+        {icon}
+      </div>
+      <h3 className="text-xl font-black uppercase tracking-tight text-[#1A237E] mb-3 group-hover:text-[#FF6D00] transition-colors">{title}</h3>
+      <p className="text-xs font-medium text-slate-500 mb-8 flex-1 leading-relaxed">{desc}</p>
+      <div className="text-[9px] font-black uppercase tracking-widest text-[#1A237E]/40 group-hover:text-[#1A237E] transition-colors flex items-center gap-2 mt-auto">
+        Access Module <span className="text-lg leading-none">&rarr;</span>
+      </div>
+    </motion.div>
+  </Link>
 );
 
 export default Dashboard;

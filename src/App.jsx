@@ -1,132 +1,151 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 
 // --- COMPONENTS ---
 import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute';
 
-// --- PAGES ---
+// --- PUBLIC PAGES ---
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard'; 
-import ReportPage from './pages/ReportPage';
-import NotificationsPage from './pages/NotificationsPage'; // NEW: Module 8
-import TouristDashboard from './pages/TouristDashboard';
-import GovernanceDashboard from './pages/GovernanceDashboard';
-import AdminEvents from './pages/AdminEvents';
-import TouristEvents from './pages/TouristEvents';
-import AdminPrograms from './pages/AdminPrograms';
-import TouristPrograms from './pages/TouristPrograms';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminHeritageSites from './pages/AdminSite';
-import MainDashboard from './pages/MainDashboard';
-import ReportsPage from './pages/ReportsPage';
+
+// --- THE ONE SMART DASHBOARD ---
+import Dashboard from './pages/Dashboard';
+import { NotificationProvider } from './context/NotificationContext'; // <-- Imported here
+
+// --- TOURIST PAGES ---
+import TouristDashboard from './pages/Tourist/TouristDashboard';
+import TouristEvents from './pages/Program-Events/TouristEvents';
+import TouristPrograms from './pages/Program-Events/TouristPrograms';
+import CompleteProfile from './pages/Tourist/CompleteProfile';
+import DocumentManager from './pages/Tourist/DocumentManager';
+
+// --- ADMIN PAGES ---
+import AdminEvents from './pages/Program-Events/AdminEvents';
+import AdminPrograms from './pages/Program-Events/AdminPrograms';
+import AdminHeritageSites from './pages/Sites/AdminHeritageSites'; 
 import NotificationsPage from './pages/NotificationsPage';
-import ProtectedRoute from './components/ProtectedRoute';
-import DashboardLayout from './components/DashboardLayout';
+import ReportsPage from './pages/ReportPage'; 
+
+// --- NEW COMPLIANCE & AUDIT PAGES ---
+import ComplianceDashboard from './pages/Compliance/ComplianceDashboard';
+import AuditDashboard from './pages/Compliance/AuditDashboard';
+
+// --- NEW ADMIN MANAGEMENT PAGES ---
+import AdminUsers from './pages/Admin/AdminUsers'; 
+import AuditLogs from './pages/Admin/AuditLogs'; 
+
+// =======================================================
+// LAYOUT WRAPPER (Handles the Navbar for logged-in pages)
+// =======================================================
+const LayoutWithNavbar = ({ authState }) => {
+  return (
+    <>
+      <Navbar unreadNotifications={authState.unreadNotifications} />
+      <Outlet /> 
+    </>
+  );
+};
+
+// =======================================================
+// PROFILE GUARD (Forces tourists to complete setup)
+// =======================================================
+const TouristProfileGuard = ({ children, authState }) => {
+  if (authState.userRole === 'TOURIST' && !authState.hasProfile) {
+    return <Navigate to="/complete-profile" replace />;
+  }
+  return children;
+};
 
 function App() {
-  // --- SYNC STATE WITH LOCALSTORAGE ---
-  // This ensures the login "sticks" even after a page refresh
   const [authState, setAuthState] = useState({
     isLoggedIn: !!localStorage.getItem('token'), 
     userRole: localStorage.getItem('role') || "TOURIST", 
     userName: localStorage.getItem('name') || "User",
-    unreadNotifications: 3
+    hasProfile: localStorage.getItem('hasProfile') !== 'false', // Read profile status
+    unreadNotifications: 0
   });
 
-  // Listen for changes (Useful for your Login.jsx reload logic)
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     const name = localStorage.getItem('name');
+    const hasProfileStr = localStorage.getItem('hasProfile');
     
     if (token) {
-      setAuthState(prev => ({
-        ...prev,
-        isLoggedIn: true,
-        userRole: role,
-        userName: name
+      setAuthState(prev => ({ 
+        ...prev, 
+        isLoggedIn: true, 
+        userRole: role, 
+        userName: name,
+        hasProfile: hasProfileStr !== 'false'
       }));
     }
   }, []);
 
   return (
-    <Router>
-      <div className="relative min-h-screen bg-[#FFFDF7]">
-        
-        {/* NAVBAR: Pass real state to show/hide Dashboard, Reports, and Bell */}
-        <Navbar 
-          isLoggedIn={authState.isLoggedIn} 
-          userRole={authState.userRole} 
-          unreadNotifications={authState.unreadNotifications} 
-        />
+    // 🔥 WRAP THE ENTIRE APP IN THE NOTIFICATION PROVIDER 🔥
+    <NotificationProvider>
+      <Router>
+        <div className="relative min-h-screen bg-[#FFFDF7]">
+          <Routes>
+            
+            {/* PUBLIC ROUTES (No Navbar) */}
+            <Route path="/login" element={!authState.isLoggedIn ? <Login /> : <Navigate to="/main-dashboard" />} />
+            <Route path="/register" element={!authState.isLoggedIn ? <Register /> : <Navigate to="/main-dashboard" />} />
 
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={
-            <Home isLoggedIn={authState.isLoggedIn} userRole={authState.userRole} />
-          } />
-          
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+            {/* SETUP ROUTE (No Navbar Needed) */}
+            <Route path="/complete-profile" element={
+              authState.isLoggedIn ? 
+                (authState.hasProfile ? <Navigate to="/main-dashboard" /> : <CompleteProfile />) 
+                : <Navigate to="/login" />
+            } />
 
-          {/* DASHBOARD ROUTE: Uses role from localStorage to call DashboardServiceImpl */}
-          <Route path="/dashboard" element={
-            authState.isLoggedIn ? (
-              <Dashboard 
-                role={authState.userRole} 
-                userName={authState.userName} 
-              />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } />
+            {/* PROTECTED ROUTES (With Navbar) */}
+            <Route element={<LayoutWithNavbar authState={authState} />}>
+              
+              <Route path="/" element={<Home />} />
+              
+              {/* THE UNIFIED DASHBOARD - Guarded! */}
+              <Route path="/main-dashboard" element={
+                authState.isLoggedIn ? 
+                <TouristProfileGuard authState={authState}><Dashboard /></TouristProfileGuard> 
+                : <Navigate to="/login" />
+              } />
+              
+              <Route path="/admin" element={<Navigate to="/main-dashboard" />} />
+              <Route path="/dashboard" element={<Navigate to="/main-dashboard" />} />
 
-          {/* REPORTS ROUTE (Module 7): Validates role before loading ReportPage */}
-          <Route path="/reports" element={
-            authState.isLoggedIn ? (
-              <ReportPage 
-                isLoggedIn={authState.isLoggedIn} 
-                userRole={authState.userRole} 
-              />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } />
+              {/* TOURIST ROUTES - Guarded! */}
+              <Route path="/tourist" element={authState.isLoggedIn ? <TouristProfileGuard authState={authState}><TouristDashboard /></TouristProfileGuard> : <Navigate to="/login" />} />
+              <Route path="/tourist/events" element={authState.isLoggedIn ? <TouristProfileGuard authState={authState}><TouristEvents /></TouristProfileGuard> : <Navigate to="/login" />} />
+              <Route path="/tourist/programs" element={authState.isLoggedIn ? <TouristProfileGuard authState={authState}><TouristPrograms /></TouristProfileGuard> : <Navigate to="/login" />} />
+              <Route path="/tourist/documents" element={authState.isLoggedIn ? <TouristProfileGuard authState={authState}><DocumentManager /></TouristProfileGuard> : <Navigate to="/login" />} />
 
-          {/* NOTIFICATIONS ROUTE (Module 8): Maps to NotificationServiceImpl */}
-          <Route path="/notifications" element={
-            authState.isLoggedIn ? (
-              <NotificationsPage />
-            ) : (
-              <Navigate to="/login" />
-            )
-          } />
+              {/* ADMIN ROUTES */}
+              <Route path="/events" element={authState.isLoggedIn ? <AdminEvents /> : <Navigate to="/login" />} />
+              <Route path="/programs" element={authState.isLoggedIn ? <AdminPrograms /> : <Navigate to="/login" />} />
+              <Route path="/sites" element={authState.isLoggedIn ? <AdminHeritageSites /> : <Navigate to="/login" />} /> 
+              
+              {/* NEW COMPLIANCE & AUDIT ROUTES */}
+              <Route path="/compliance" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><ComplianceDashboard /></ProtectedRoute>} />
+              <Route path="/audits" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><AuditDashboard /></ProtectedRoute>} />
 
-          {/* Fallback Catch-all */}
-          <Route path="*" element={<Navigate to="/" />} />
-        </Routes>
-      </div>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/admin/events" element={<AdminEvents />} />
-        <Route path="/events" element={<TouristEvents />} />
-        <Route path="/programs" element={<TouristPrograms />} />
-        <Route path="/admin/programs" element={<AdminPrograms />} />
-        <Route path="/admin/sites" element={<AdminHeritageSites />} />
-        <Route path="/dashboard" element={<TouristDashboard />} />
-        <Route path="/GovernanceDashboard" element={<GovernanceDashboard />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        
-        {/* NEW UNIFIED ROUTES */}
-        <Route path="/main-dashboard" element={<ProtectedRoute><DashboardLayout><MainDashboard /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><DashboardLayout><ReportsPage /></DashboardLayout></ProtectedRoute>} />
-        <Route path="/notifications" element={<ProtectedRoute><DashboardLayout><NotificationsPage /></DashboardLayout></ProtectedRoute>} />
-      </Routes>
-    </Router>
+              {/* HIGH-SECURITY ROUTES */}
+              <Route path="/reports" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><ReportsPage /></ProtectedRoute>} />
+              <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+              
+              <Route path="/admin-users" element={<ProtectedRoute allowedRoles={['ADMIN', 'OFFICER']}><AdminUsers /></ProtectedRoute>} />
+              <Route path="/audit-logs" element={<ProtectedRoute allowedRoles={['ADMIN', 'OFFICER']}><AuditLogs /></ProtectedRoute>} />
+
+              <Route path="*" element={<Navigate to="/" />} />
+            </Route>
+
+          </Routes>
+        </div>
+      </Router>
+    </NotificationProvider>
   );
 }
 
