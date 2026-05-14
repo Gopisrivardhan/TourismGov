@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
   MapPin, Calendar, Users, ShieldCheck, 
-  Loader2, FileSearch, Layers, CalendarDays, Ticket, Map, Shield // Shield is now correctly imported!
+  Loader2, FileSearch, Layers, CalendarDays, Ticket, Map, Shield, User 
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -20,7 +20,6 @@ const Dashboard = () => {
         const BASE_URL = 'http://localhost:8383/tourismgov/v1';
 
         // 1. Fetch data concurrently
-        // Notice we changed /bookings to /bookings/paged because /bookings doesn't exist in your Controller!
         const [sitesRes, programsRes, eventsRes, usersRes, bookingsPagedRes] = await Promise.all([
             axios.get(`${BASE_URL}/sites`, axiosConfig).catch(() => ({ data: [] })),
             axios.get(`${BASE_URL}/programs`, axiosConfig).catch(() => ({ data: [] })),
@@ -115,29 +114,42 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* ADMINISTRATIVE MODULES (HIDDEN FROM TOURISTS) */}
-        {userRole !== 'TOURIST' && (
-          <div className="mt-16 border-t border-[#1A237E]/10 pt-16 animate-fade-in-up">
-            <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div>
-                    <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-[#1A237E]">
-                    Administrative Modules
-                    </h2>
-                    <p className="font-bold text-xs uppercase tracking-widest text-[#1A237E]/50 mt-2">
-                        System Management & Oversight Console
-                    </p>
-                </div>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-              <ActionCard to="/programs" icon={<Layers size={24} />} title="Programs" desc="Manage national tourism campaigns and budgets." color="bg-[#1A237E]" />
-              <ActionCard to="/events" icon={<CalendarDays size={24} />} title="Events" desc="Schedule festivals and oversee tourist bookings." color="bg-[#FF6D00]" />
-              <ActionCard to="/sites" icon={<Map size={24} />} title="Sites" desc="Register monuments and track preservation logs." color="bg-cyan-600" />
-              <ActionCard to="/compliance" icon={<Shield size={24} />} title="Governance" desc="Conduct official audits and compliance records." color="bg-rose-600" />
-              <ActionCard to="/reports" icon={<FileSearch size={24} />} title="Reports" desc="Generate and download secure intelligence briefs." color="bg-emerald-600" />
-            </div>
+        {/* MODULES NAVIGATION */}
+        <div className="mt-16 border-t border-[#1A237E]/10 pt-16 animate-fade-in-up">
+          <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                  <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter text-[#1A237E]">
+                    {userRole === 'TOURIST' ? 'Personal Modules' : 'System Modules'}
+                  </h2>
+                  <p className="font-bold text-xs uppercase tracking-widest text-[#1A237E]/50 mt-2">
+                    {userRole === 'TOURIST' ? 'Manage your profile and bookings.' : 'System Management & Oversight Console.'}
+                  </p>
+              </div>
           </div>
-        )}
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            
+            {/* 🔥 NEW: TOURIST DETAIL CARD (Visible to everyone) */}
+            <ActionCard 
+              to="/tourist" 
+              icon={<User size={24} />} 
+              title="Tourist Detail" 
+              desc="View your profile, verify documents, and manage bookings." 
+              color="bg-indigo-500" 
+            />
+
+            {/* ADMINISTRATIVE MODULES (HIDDEN FROM TOURISTS) */}
+            {userRole !== 'TOURIST' && (
+              <>
+                <ActionCard to="/programs" icon={<Layers size={24} />} title="Programs" desc="Manage national tourism campaigns and budgets." color="bg-[#1A237E]" />
+                <ActionCard to="/events" icon={<CalendarDays size={24} />} title="Events" desc="Schedule festivals and oversee tourist bookings." color="bg-[#FF6D00]" />
+                <ActionCard to="/sites" icon={<Map size={24} />} title="Sites" desc="Register monuments and track preservation logs." color="bg-cyan-600" />
+                <ActionCard to="/compliance" icon={<Shield size={24} />} title="Governance" desc="Conduct official audits and compliance records." color="bg-rose-600" />
+                <ActionCard to="/reports" icon={<FileSearch size={24} />} title="Reports" desc="Generate and download secure intelligence briefs." color="bg-emerald-600" />
+              </>
+            )}
+          </div>
+        </div>
 
       </main>
     </div>

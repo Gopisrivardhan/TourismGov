@@ -4,10 +4,10 @@ import {
   Bell, CheckCheck, Info, Clock, X, Maximize2, 
   ChevronDown, ShieldAlert
 } from 'lucide-react';
-import { notificationApi } from '../services/api';
-import { useNotifications } from '../context/NotificationContext';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import { notificationApi } from '../../services/api';
+import { useNotifications } from '../../context/NotificationContext';
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
 
 const NotificationsPage = () => {
     const { refresh: refreshGlobalCount } = useNotifications();

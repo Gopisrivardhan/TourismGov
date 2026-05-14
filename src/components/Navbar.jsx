@@ -34,6 +34,10 @@ const Navbar = () => {
     // 2. DYNAMIC LINKS
     const navLinks = [
         { name: 'Dashboard', path: '/main-dashboard' }, 
+        
+        // 🔥 NEW SMART TOURIST DETAIL LINK 🔥
+        { name: 'Tourist Details', path: isTourist ? '/tourist' : '/admin-tourists' },
+        
         { name: 'Programs', path: isTourist ? '/tourist/programs' : '/programs' },
         { name: 'Events', path: isTourist ? '/tourist/events' : '/events' },
     ];
