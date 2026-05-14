@@ -2,55 +2,94 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Bell, LogOut, User } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
-
+ 
 const Navbar = () => {
     const navigate = useNavigate();
     const location = useLocation();
-
+ 
     // Context for live notifications
     const { unreadCount, latestNotification, refresh } = useNotifications();
     const [showLatest, setShowLatest] = useState(false);
-
+ 
     // 1. SMART DETECTION
     const token = localStorage.getItem('token');
     const isLoggedIn = !!token;
     const userName = localStorage.getItem('name') || 'User';
-    const userRole = localStorage.getItem('role') || 'TOURIST';
-    
-    const isTourist = userRole === 'TOURIST';
-    const isAdmin = userRole === 'ADMIN';
-
+   
+    // Normalize role string to handle different database enum formats (e.g., 'PROGRAM_MANAGER' vs 'MANAGER')
+    const rawRole = localStorage.getItem('role') || 'TOURIST';
+    const userRole = rawRole.toUpperCase();
+ 
     const handleLogout = () => {
         localStorage.clear();
         navigate('/');
         window.location.reload();
     };
-
+ 
     const handleBellClick = () => {
         setShowLatest(!showLatest);
         if (!showLatest) refresh(); // fetch latest when opening
     };
-
-    // 2. DYNAMIC LINKS
-    const navLinks = [
-        { name: 'Dashboard', path: '/main-dashboard' }, 
-        { name: 'Programs', path: isTourist ? '/tourist/programs' : '/programs' },
-        { name: 'Events', path: isTourist ? '/tourist/events' : '/events' },
+ 
+    // 2. DYNAMIC LINKS BASED ON PDF ROLES
+    let navLinks = [
+        { name: 'Dashboard', path: '/main-dashboard' } // Mandatory for everyone
     ];
-
-    if (!isTourist) {
-        navLinks.push({ name: 'Heritage Sites', path: '/sites' }); 
-        navLinks.push({ name: 'Compliance', path: '/compliance' }); 
-        navLinks.push({ name: 'Audits', path: '/audits' });         
-        navLinks.push({ name: 'Reports', path: '/reports' });
+ 
+    switch (userRole) {
+        case 'ADMINISTRATOR':
+        case 'ADMIN':
+            navLinks.push(
+                { name: 'Tourist Details', path: '/admin-tourists' },
+                { name: 'Programs', path: '/programs' },
+                { name: 'Events', path: '/events' },
+                { name: 'Heritage Sites', path: '/sites' },
+                { name: 'Compliance', path: '/compliance' },
+                { name: 'Audits', path: '/audits' },
+                { name: 'Reports', path: '/reports' },
+                { name: 'Users', path: '/admin-users' },
+                { name: 'Audit Logs', path: '/audit-logs' }
+            );
+            break;
+        case 'PROGRAM_MANAGER':
+        case 'MANAGER':
+            navLinks.push(
+                { name: 'Programs', path: '/programs' },
+                { name: 'Events', path: '/events' }
+            );
+            break;
+        case 'TOURISM_OFFICER':
+        case 'OFFICER':
+            navLinks.push(
+                { name: 'Tourist Details', path: '/admin-tourists' },
+                { name: 'Heritage Sites', path: '/sites' }
+            );
+            break;
+        case 'GOVERNMENT_AUDITOR':
+        case 'AUDITOR':
+            navLinks.push(
+                { name: 'Audits', path: '/audits' },
+                { name: 'Compliance', path: '/compliance' }
+            );
+            break;
+        case 'COMPLIANCE_OFFICER':
+        case 'COMPLIANCE':
+            navLinks.push(
+                { name: 'Compliance', path: '/compliance' }
+            );
+            break;
+        case 'TOURIST':
+        default:
+            navLinks.push(
+                { name: 'Tourist Details', path: '/tourist' },
+                { name: 'Programs', path: '/tourist/programs' },
+                { name: 'Events', path: '/tourist/events' }
+            );
+            break;
     }
-    
-    // Inject Admin-Specific Links
-    if (isAdmin) {
-        navLinks.push({ name: 'Users', path: '/admin-users' });
-        navLinks.push({ name: 'Audit Logs', path: '/audit-logs' });
-    }
-
+ 
+    const isTourist = userRole === 'TOURIST';
+ 
     // ==========================================
     // PUBLIC NAVBAR (When Logged Out)
     // ==========================================
@@ -59,9 +98,9 @@ const Navbar = () => {
             <div className="absolute top-0 left-0 w-full z-50 p-4 md:p-6">
                 <nav className="max-w-7xl mx-auto bg-white/90 backdrop-blur-xl rounded-full px-5 md:px-8 py-4 flex justify-between items-center shadow-2xl border border-white/20">
                     <Link to="/" className="text-[#1A237E] text-xl font-black tracking-tighter flex items-center gap-2">
-                        <img 
-                            src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" 
-                            alt="Government of India Emblem" 
+                        <img
+                            src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+                            alt="Government of India Emblem"
                             className="h-8 md:h-10 w-auto opacity-90"
                         />
                         TourismGov
@@ -74,33 +113,33 @@ const Navbar = () => {
             </div>
         );
     }
-
+ 
     // ==========================================
     // PRIVATE NAVBAR (When Logged In)
     // ==========================================
     return (
         <div className="absolute top-0 left-0 w-full z-50 p-4 md:p-6">
             <nav className="max-w-[95%] xl:max-w-7xl mx-auto bg-white/95 backdrop-blur-xl rounded-full px-4 md:px-6 py-3 flex justify-between items-center shadow-xl border border-white">
-                
+               
                 {/* LOGO */}
                 <Link to="/main-dashboard" className="text-[#1A237E] text-lg md:text-xl font-black tracking-tighter flex items-center gap-2 shrink-0">
-                    <img 
-                        src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" 
-                        alt="Government of India Emblem" 
+                    <img
+                        src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
+                        alt="Government of India Emblem"
                         className="h-7 md:h-9 w-auto opacity-90"
                     />
                     <span className="hidden md:block">TourismGov</span>
                 </Link>
-
+ 
                 {/* DYNAMIC MIDDLE LINKS */}
-                <div className="hidden lg:flex items-center justify-center gap-6 flex-1">
+                <div className="hidden lg:flex items-center justify-center gap-6 flex-1 flex-wrap px-4">
                     {navLinks.map((link) => (
-                        <Link 
-                            key={link.name} 
+                        <Link
+                            key={link.name}
                             to={link.path}
                             className={`text-[9px] font-black uppercase tracking-widest transition-colors ${
-                                location.pathname === link.path 
-                                    ? 'text-[#FF6D00]' 
+                                location.pathname === link.path
+                                    ? 'text-[#FF6D00]'
                                     : 'text-[#1A237E] hover:text-[#FF6D00]'
                             }`}
                         >
@@ -108,11 +147,11 @@ const Navbar = () => {
                         </Link>
                     ))}
                 </div>
-
+ 
                 {/* RIGHT SIDE ACTIONS */}
                 <div className="flex items-center gap-3 md:gap-5 shrink-0">
-                    
-                    {/* LIVE NOTIFICATIONS BELL DROPDOWN */}
+                   
+                    {/* LIVE NOTIFICATIONS BELL DROPDOWN (MANDATORY FOR ALL) */}
                     <div className="relative">
                         <button
                             onClick={handleBellClick}
@@ -125,7 +164,7 @@ const Navbar = () => {
                                 </span>
                             )}
                         </button>
-
+ 
                         {/* DROPDOWN PANEL */}
                         {showLatest && (
                             <div className="absolute right-0 mt-4 w-80 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 p-5 z-[60]">
@@ -181,9 +220,9 @@ const Navbar = () => {
                             </div>
                         )}
                     </div>
-
+ 
                     {/* SMART USER PROFILE PILL */}
-                    <Link 
+                    <Link
                         to={isTourist ? '/tourist' : '/main-dashboard'}
                         className="hidden md:flex items-center gap-3 bg-gray-50 pl-4 pr-1.5 py-1.5 rounded-full border border-gray-100 cursor-pointer hover:bg-gray-200 hover:border-gray-300 transition-all group"
                         title={isTourist ? "Go to My Profile" : "Go to Dashboard"}
@@ -193,18 +232,18 @@ const Navbar = () => {
                                 {userName}
                             </span>
                             <span className="text-[8px] font-bold uppercase tracking-widest text-[#FF6D00] leading-none">
-                                {userRole}
+                                {userRole.replace('_', ' ')}
                             </span>
                         </div>
                         <div className="w-8 h-8 bg-[#1A237E] rounded-full flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
                             <User size={14} />
                         </div>
                     </Link>
-
+ 
                     <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
-
+ 
                     {/* LOGOUT */}
-                    <button 
+                    <button
                         onClick={handleLogout}
                         className="flex items-center gap-2 text-slate-400 hover:text-rose-600 transition-colors group"
                         title="Log Out"
@@ -219,5 +258,6 @@ const Navbar = () => {
         </div>
     );
 };
-
+ 
 export default Navbar;
+ 

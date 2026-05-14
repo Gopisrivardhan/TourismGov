@@ -11,8 +11,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 
 // --- THE ONE SMART DASHBOARD ---
-import Dashboard from './pages/Dashboard';
-import { NotificationProvider } from './context/NotificationContext'; // <-- Imported here
+import Dashboard from './pages/Report/Dashboard';
+import { NotificationProvider } from './context/NotificationContext';
 
 // --- TOURIST PAGES ---
 import TouristDashboard from './pages/Tourist/TouristDashboard';
@@ -21,18 +21,21 @@ import TouristPrograms from './pages/Program-Events/TouristPrograms';
 import CompleteProfile from './pages/Tourist/CompleteProfile';
 import DocumentManager from './pages/Tourist/DocumentManager';
 
+// 🔥 OFFICER DASHBOARD FOR TOURISTS 🔥
+import AdminTourists from './pages/Tourist/AdminTourists'; 
+
 // --- ADMIN PAGES ---
 import AdminEvents from './pages/Program-Events/AdminEvents';
 import AdminPrograms from './pages/Program-Events/AdminPrograms';
 import AdminHeritageSites from './pages/Sites/AdminHeritageSites'; 
-import NotificationsPage from './pages/NotificationsPage';
-import ReportsPage from './pages/ReportPage'; 
+import NotificationsPage from './pages/Report/NotificationsPage';
+import ReportsPage from './pages/Report/ReportPage'; 
 
-// --- NEW COMPLIANCE & AUDIT PAGES ---
+// --- COMPLIANCE & AUDIT PAGES ---
 import ComplianceDashboard from './pages/Compliance/ComplianceDashboard';
 import AuditDashboard from './pages/Compliance/AuditDashboard';
 
-// --- NEW ADMIN MANAGEMENT PAGES ---
+// --- ADMIN MANAGEMENT PAGES ---
 import AdminUsers from './pages/Admin/AdminUsers'; 
 import AuditLogs from './pages/Admin/AuditLogs'; 
 
@@ -63,7 +66,7 @@ function App() {
     isLoggedIn: !!localStorage.getItem('token'), 
     userRole: localStorage.getItem('role') || "TOURIST", 
     userName: localStorage.getItem('name') || "User",
-    hasProfile: localStorage.getItem('hasProfile') !== 'false', // Read profile status
+    hasProfile: localStorage.getItem('hasProfile') === 'true', 
     unreadNotifications: 0
   });
 
@@ -79,23 +82,20 @@ function App() {
         isLoggedIn: true, 
         userRole: role, 
         userName: name,
-        hasProfile: hasProfileStr !== 'false'
+        hasProfile: hasProfileStr === 'true'
       }));
     }
   }, []);
 
   return (
-    // 🔥 WRAP THE ENTIRE APP IN THE NOTIFICATION PROVIDER 🔥
     <NotificationProvider>
       <Router>
         <div className="relative min-h-screen bg-[#FFFDF7]">
           <Routes>
             
-            {/* PUBLIC ROUTES (No Navbar) */}
+            {/* PUBLIC ROUTES */}
             <Route path="/login" element={!authState.isLoggedIn ? <Login /> : <Navigate to="/main-dashboard" />} />
             <Route path="/register" element={!authState.isLoggedIn ? <Register /> : <Navigate to="/main-dashboard" />} />
-
-            {/* SETUP ROUTE (No Navbar Needed) */}
             <Route path="/complete-profile" element={
               authState.isLoggedIn ? 
                 (authState.hasProfile ? <Navigate to="/main-dashboard" /> : <CompleteProfile />) 
@@ -107,7 +107,6 @@ function App() {
               
               <Route path="/" element={<Home />} />
               
-              {/* THE UNIFIED DASHBOARD - Guarded! */}
               <Route path="/main-dashboard" element={
                 authState.isLoggedIn ? 
                 <TouristProfileGuard authState={authState}><Dashboard /></TouristProfileGuard> 
@@ -117,25 +116,24 @@ function App() {
               <Route path="/admin" element={<Navigate to="/main-dashboard" />} />
               <Route path="/dashboard" element={<Navigate to="/main-dashboard" />} />
 
-              {/* TOURIST ROUTES - Guarded! */}
+              {/* TOURIST ROUTES */}
               <Route path="/tourist" element={authState.isLoggedIn ? <TouristProfileGuard authState={authState}><TouristDashboard /></TouristProfileGuard> : <Navigate to="/login" />} />
               <Route path="/tourist/events" element={authState.isLoggedIn ? <TouristProfileGuard authState={authState}><TouristEvents /></TouristProfileGuard> : <Navigate to="/login" />} />
               <Route path="/tourist/programs" element={authState.isLoggedIn ? <TouristProfileGuard authState={authState}><TouristPrograms /></TouristProfileGuard> : <Navigate to="/login" />} />
               <Route path="/tourist/documents" element={authState.isLoggedIn ? <TouristProfileGuard authState={authState}><DocumentManager /></TouristProfileGuard> : <Navigate to="/login" />} />
+
+              {/* 🔥 OFFICER DASHBOARD ROUTE FOR TOURISTS 🔥 */}
+              <Route path="/admin-tourists" element={<ProtectedRoute allowedRoles={['ADMIN', 'OFFICER', 'MANAGER', 'AUDITOR']}><AdminTourists /></ProtectedRoute>} />
 
               {/* ADMIN ROUTES */}
               <Route path="/events" element={authState.isLoggedIn ? <AdminEvents /> : <Navigate to="/login" />} />
               <Route path="/programs" element={authState.isLoggedIn ? <AdminPrograms /> : <Navigate to="/login" />} />
               <Route path="/sites" element={authState.isLoggedIn ? <AdminHeritageSites /> : <Navigate to="/login" />} /> 
               
-              {/* NEW COMPLIANCE & AUDIT ROUTES */}
               <Route path="/compliance" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><ComplianceDashboard /></ProtectedRoute>} />
               <Route path="/audits" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><AuditDashboard /></ProtectedRoute>} />
-
-              {/* HIGH-SECURITY ROUTES */}
               <Route path="/reports" element={<ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'COMPLIANCE', 'AUDITOR', 'OFFICER']}><ReportsPage /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-              
               <Route path="/admin-users" element={<ProtectedRoute allowedRoles={['ADMIN', 'OFFICER']}><AdminUsers /></ProtectedRoute>} />
               <Route path="/audit-logs" element={<ProtectedRoute allowedRoles={['ADMIN', 'OFFICER']}><AuditLogs /></ProtectedRoute>} />
 

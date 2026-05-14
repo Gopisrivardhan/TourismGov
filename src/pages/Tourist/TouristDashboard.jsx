@@ -3,7 +3,7 @@ import api from '../../services/api';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import DocumentManager from './DocumentManager'; 
-import { Loader2, Ticket, CalendarDays } from 'lucide-react'; // Added icons
+import { Loader2, Ticket, CalendarDays, Edit2, X, Check } from 'lucide-react'; // Added Edit, Cancel, Save icons
 
 const TouristDashboard = () => {
     const [touristData, setTouristData] = useState(null);
@@ -14,11 +14,31 @@ const TouristDashboard = () => {
     const [bookings, setBookings] = useState([]);
     const [loadingBookings, setLoadingBookings] = useState(false);
 
+    // Edit State
+    const [isEditing, setIsEditing] = useState(false);
+    const [savingForm, setSavingForm] = useState(false);
+    const [editForm, setEditForm] = useState({
+        name: '',
+        contactInfo: '',
+        address: '',
+        dob: '',
+        gender: ''
+    });
+
     // --- FETCH PROFILE ---
     const fetchProfile = async () => {
         try {
             const response = await api.get('/tourismgov/v1/tourist/profile');
             setTouristData(response.data);
+            
+            // Populate edit form automatically
+            setEditForm({
+                name: response.data.name || '',
+                contactInfo: response.data.contactInfo || '',
+                address: response.data.address || '',
+                dob: response.data.dob || '',
+                gender: response.data.gender || ''
+            });
         } catch (error) {
             if(error.response?.status === 401) window.location.href = '/login';
         } finally {
@@ -57,6 +77,44 @@ const TouristDashboard = () => {
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, touristData]);
+
+
+    // --- HANDLE UPDATE PROFILE ---
+    const handleInputChange = (e) => {
+        setEditForm({ ...editForm, [e.target.name]: e.target.value });
+    };
+
+    const handleSaveProfile = async () => {
+        setSavingForm(true);
+        try {
+            const token = localStorage.getItem('token');
+            await api.put('/tourismgov/v1/tourist/update', editForm, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            // Re-fetch to display updated data
+            await fetchProfile();
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Update failed:", error);
+            alert(error.response?.data?.message || "Failed to update profile.");
+        } finally {
+            setSavingForm(false);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        // Reset form back to current DB values
+        setEditForm({
+            name: touristData.name || '',
+            contactInfo: touristData.contactInfo || '',
+            address: touristData.address || '',
+            dob: touristData.dob || '',
+            gender: touristData.gender || ''
+        });
+        setIsEditing(false);
+    };
+
 
     if (loading) return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-[#FFFDF7]">
@@ -102,7 +160,6 @@ const TouristDashboard = () => {
                             </span>
                         </div>
 
-                        {/* REMOVED NOTIFICATIONS TAB */}
                         <nav className="flex flex-col gap-2">
                             <MenuButton active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} icon="👤" label="My Profile" />
                             <MenuButton active={activeTab === 'booked'} onClick={() => setActiveTab('booked')} icon="🎫" label="My Bookings" />
@@ -120,14 +177,82 @@ const TouristDashboard = () => {
                                 Profile <span className="text-[#FF6D00]">Overview.</span>
                             </h1>
                             
-                            <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-[#1A237E]/5">
-                                <h2 className="text-lg font-black uppercase mb-6 text-[#1A237E]">Personal Information</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <DetailItem label="Full Name" value={touristData.name} />
-                                    <DetailItem label="Email" value={touristData.email} />
-                                    <DetailItem label="Phone" value={touristData.contactInfo} />
-                                    <DetailItem label="Address" value={touristData.address} />
+                            <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-[#1A237E]/5 relative">
+                                {/* Header with Action Buttons */}
+                                <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-4">
+                                    <h2 className="text-lg font-black uppercase text-[#1A237E]">Personal Information</h2>
+                                    
+                                    {!isEditing ? (
+                                        <button 
+                                            onClick={() => setIsEditing(true)} 
+                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#FF6D00] bg-orange-50 px-4 py-2 rounded-full hover:bg-orange-100 transition-colors"
+                                        >
+                                            <Edit2 size={14} /> Edit Profile
+                                        </button>
+                                    ) : (
+                                        <div className="flex items-center gap-3">
+                                            <button 
+                                                onClick={handleCancelEdit} 
+                                                disabled={savingForm}
+                                                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-gray-500 bg-gray-100 px-4 py-2 rounded-full hover:bg-gray-200 transition-colors disabled:opacity-50"
+                                            >
+                                                <X size={14} /> Cancel
+                                            </button>
+                                            <button 
+                                                onClick={handleSaveProfile} 
+                                                disabled={savingForm}
+                                                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white bg-[#1A237E] px-4 py-2 rounded-full hover:bg-blue-900 transition-colors disabled:opacity-50"
+                                            >
+                                                {savingForm ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} 
+                                                {savingForm ? 'Saving...' : 'Save'}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Form / Display Area */}
+                                {!isEditing ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <DetailItem label="Full Name" value={touristData.name} />
+                                        <DetailItem label="Email" value={touristData.email} />
+                                        <DetailItem label="Phone" value={touristData.contactInfo} />
+                                        <DetailItem label="Date of Birth" value={touristData.dob} />
+                                        <DetailItem label="Gender" value={touristData.gender} />
+                                        <DetailItem label="Address" value={touristData.address} />
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="flex flex-col">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-[#FF6D00] mb-2">Full Name</label>
+                                            <input name="name" value={editForm.name} onChange={handleInputChange} className="border border-gray-200 rounded-xl p-3 text-sm font-bold text-[#1A237E] focus:outline-none focus:border-[#FF6D00]" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Email (Cannot Edit)</label>
+                                            <input disabled value={touristData.email} className="border border-gray-100 bg-gray-50 rounded-xl p-3 text-sm font-bold text-gray-400 cursor-not-allowed" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-[#FF6D00] mb-2">Phone</label>
+                                            <input name="contactInfo" value={editForm.contactInfo} onChange={handleInputChange} className="border border-gray-200 rounded-xl p-3 text-sm font-bold text-[#1A237E] focus:outline-none focus:border-[#FF6D00]" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-[#FF6D00] mb-2">Date of Birth</label>
+                                            <input type="date" name="dob" value={editForm.dob} onChange={handleInputChange} className="border border-gray-200 rounded-xl p-3 text-sm font-bold text-[#1A237E] focus:outline-none focus:border-[#FF6D00]" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-[#FF6D00] mb-2">Gender</label>
+                                            <select name="gender" value={editForm.gender} onChange={handleInputChange} className="border border-gray-200 rounded-xl p-3 text-sm font-bold text-[#1A237E] focus:outline-none focus:border-[#FF6D00]">
+                                                <option value="" disabled>Select</option>
+                                                <option value="MALE">Male</option>
+                                                <option value="FEMALE">Female</option>
+                                                <option value="OTHER">Other</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex flex-col md:col-span-2">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-[#FF6D00] mb-2">Address</label>
+                                            <input name="address" value={editForm.address} onChange={handleInputChange} className="border border-gray-200 rounded-xl p-3 text-sm font-bold text-[#1A237E] focus:outline-none focus:border-[#FF6D00]" />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <DocumentManager 
@@ -139,7 +264,7 @@ const TouristDashboard = () => {
                         </div>
                     )}
 
-                    {/* TAB 2: BOOKINGS (NOW FULLY DYNAMIC) */}
+                    {/* TAB 2: BOOKINGS */}
                     {activeTab === 'booked' && (
                         <div className="space-y-8 animate-fade-in-up">
                             <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tighter mb-6">
@@ -170,7 +295,6 @@ const TouristDashboard = () => {
                                                     </span>
                                                 </div>
                                                 
-                                                {/* If your backend sends eventTitle use it, otherwise show the ID */}
                                                 <h3 className="font-black text-xl uppercase text-[#1A237E] mb-2 leading-tight group-hover:text-[#FF6D00] transition-colors line-clamp-2">
                                                     {booking.eventTitle || `Event #${booking.eventId}`}
                                                 </h3>
@@ -183,7 +307,6 @@ const TouristDashboard = () => {
                                                         {booking.numberOfTickets} Ticket(s)
                                                     </span>
                                                 </div>
-                                                {/* If your backend sends bookingDate, show it */}
                                                 {booking.bookingDate && (
                                                     <div className="flex items-center gap-1.5 text-gray-400">
                                                         <CalendarDays size={14} />
@@ -224,7 +347,9 @@ const MenuButton = ({ active, onClick, icon, label }) => (
 const DetailItem = ({ label, value }) => (
     <div className="border-b border-gray-100 pb-3">
         <p className="text-[9px] font-black uppercase tracking-widest text-[#FF6D00] mb-1">{label}</p>
-        <p className="text-sm font-bold text-[#1A237E]">{value || 'Not Provided'}</p>
+        <p className="text-sm font-bold text-[#1A237E] capitalize">
+            {value ? value.toString().toLowerCase() : 'Not Provided'}
+        </p>
     </div>
 );
 

@@ -344,9 +344,11 @@ const AdminHeritageSites = () => {
                                     <label className="block text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] mb-2 ml-4">Status</label>
                                     <select required value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})}
                                         className="w-full px-5 py-3 md:px-6 md:py-4 bg-[#F8F9FF] rounded-full border-2 border-transparent focus:border-[#FF6D00] focus:bg-white outline-none transition-all font-bold text-sm md:text-base cursor-pointer">
-                                        <option value="ACTIVE">Active</option>
-                                        <option value="UNDER_MAINTENANCE">Under Maintenance</option>
-                                        <option value="CLOSED">Closed</option>
+                                        <option value="OPEN">OPEN</option>
+                                        <option value="CLOSED_FOR_MAINTENANCE">CLOSED_FOR_MAINTENANCE</option>
+                                        <option value="PERMANENTLY_CLOSED">PERMANENTLY_CLOSED</option>
+
+                                        
                                     </select>
                                 </div>
 

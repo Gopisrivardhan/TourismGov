@@ -7,9 +7,9 @@ import {
   Activity, Globe, FileSearch
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { reportApi } from '../services/api'; //
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import { reportApi } from '../../services/api'; //
+import Navbar from '../../components/Navbar';
+import Footer from '../../components/Footer';
 
 // --- INDIAN-CENTRIC SCOPE CONFIGURATION ---
 const SCOPES = [

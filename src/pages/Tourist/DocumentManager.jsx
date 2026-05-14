@@ -31,17 +31,6 @@ const DocumentManager = ({ title = "Documents", documents = [], touristId, onRef
         }
     };
 
-    const handleDelete = async (documentId) => {
-        if(window.confirm("Are you sure you want to delete this document?")) {
-            try {
-                await api.delete(`/tourismgov/v1/touristdoc/${touristId}/documents/${documentId}`);
-                onRefresh(); // Refresh the parent data
-            } catch (error) {
-                alert("Failed to delete document.");
-            }
-        }
-    };
-
     const handleUpload = async (e) => {
         e.preventDefault();
         setUploading(true);
@@ -72,9 +61,13 @@ const DocumentManager = ({ title = "Documents", documents = [], touristId, onRef
         <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-white">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-black uppercase">{title}</h2>
-                <button onClick={() => setIsModalOpen(true)} className="bg-[#1A237E] text-white text-[10px] font-black uppercase px-4 py-2 rounded-full hover:bg-[#FF6D00] transition-colors">
-                    + Add New
-                </button>
+                
+                {/* Automatically hide the "Add New" button if there are 2 or more documents */}
+                {documents.length < 2 && (
+                    <button onClick={() => setIsModalOpen(true)} className="bg-[#1A237E] text-white text-[10px] font-black uppercase px-4 py-2 rounded-full hover:bg-[#FF6D00] transition-colors">
+                        + Add New
+                    </button>
+                )}
             </div>
 
             {/* Existing Documents List */}
@@ -92,8 +85,7 @@ const DocumentManager = ({ title = "Documents", documents = [], touristId, onRef
                             <button onClick={() => handleViewDocument(doc.documentId)} className="text-[#1A237E] font-bold text-[10px] uppercase tracking-widest hover:text-[#FF6D00] hover:underline transition-colors">
                                 View
                             </button>
-                            {/* Optional Delete Button */}
-                            <button onClick={() => handleDelete(doc.documentId)} className="text-red-400 hover:text-red-600 font-black text-xs ml-2">✕</button>
+                            {/* Delete option has been intentionally removed */}
                         </div>
                     </div>
                 ))}
