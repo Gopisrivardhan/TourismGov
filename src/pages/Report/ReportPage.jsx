@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+
 import { 
   Download, PieChart, Shield, 
   Calendar, Layers, CheckCircle, Search, 
@@ -19,7 +20,7 @@ const SCOPES = [
     icon: <Layers size={24} />, 
     color: 'from-orange-600 to-red-700', 
     // High-def image of Hampi, Karnataka
-    img: 'https://images.unsplash.com/photo-1581012733671-912f36f6036a?auto=format&fit=crop&q=80&w=1200' 
+    img: 'TourismGov_Frontend/src/assets/HeritageSiteReport.png' 
   },
   { 
     id: 'EVENT', 
@@ -27,7 +28,7 @@ const SCOPES = [
     icon: <Calendar size={24} />, 
     color: 'from-pink-600 to-purple-700', 
     // Indian Festival / Celebration
-    img: 'https://images.unsplash.com/photo-1532375811400-d754e3e3d286?auto=format&fit=crop&q=80&w=1200' 
+    img: 'TourismGov_Frontend/src/assets/eventreport.png' 
   },
   { 
     id: 'PROGRAM', 
@@ -140,9 +141,9 @@ const ReportPage = () => {
           <div className="space-y-16">
             {/* REDUCED HEADER SIZE */}
             <header className="relative">
-               <span className="text-[9px] font-black text-[#FF6D00] uppercase tracking-[0.5em] mb-3 block">Tourism Government of India</span>
-               <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-[0.9] text-[#1A237E]">
-                 Strategic <br /><span className="text-[#FF6D00]">Insights.</span>
+               <span className="text-[14px] text-center font-black text-[#FF6D00] uppercase tracking-[0.5em] mb-3 block">Tourism Government of India</span>
+               <h1 className="text-1xl md:text-7xl text-center font-black uppercase tracking-tighter leading-[0.9] text-[#1A237E]">
+                 Strategic <span className="text-[#FF6D00]">Insights</span> <br />
                </h1>
             </header>
 

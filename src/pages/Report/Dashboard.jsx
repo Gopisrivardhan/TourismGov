@@ -149,9 +149,7 @@ const Dashboard = () => {
               {userRole.replace('_', ' ')} CLEARANCE LEVEL
             </span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter leading-none">
-            Operational <br /><span className="text-[#FF6D00]">Intelligence.</span>
-          </h1>
+         
           <p className="mt-4 font-bold opacity-60 text-lg">
             System initialized for {userName}.
           </p>

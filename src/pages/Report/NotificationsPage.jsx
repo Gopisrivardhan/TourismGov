@@ -93,10 +93,9 @@ const NotificationsPage = () => {
             
             <main className="max-w-6xl mx-auto px-6 pt-36 pb-20">
                 <header className="mb-16">
-                    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-10">
-                        Operational <br /><span className="text-[#FF6D00]">Alerts.</span>
-                    </h1>
-
+                   <h1 className="text-4xl md:text-6xl text-center font-black uppercase tracking-tighter leading-[0.8] mb-10">
+    Operational <span className="text-[#FF6D00]">Alerts</span><br />
+</h1>
                     <div className="bg-white rounded-[3rem] p-4 shadow-2xl border border-white flex flex-col md:flex-row items-center gap-4">
                         <div className="relative w-full md:w-80">
                             <select 
